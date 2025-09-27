@@ -15,4 +15,7 @@ public class RepairTicket {
     private String status;
     private Integer departmentId;
     private String departmentName;
+    private String equipmentId;
+    private String requesterId;
+    private String managerId;
 }

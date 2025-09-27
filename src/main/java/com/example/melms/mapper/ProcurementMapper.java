@@ -1,5 +1,6 @@
 package com.example.melms.mapper;
 
+import com.example.melms.pojo.ProcureOrder;
 import org.apache.ibatis.annotations.*;
 
 import java.util.List;
@@ -100,4 +101,26 @@ public interface ProcurementMapper {
     void assignOrder(@Param("procure_id") int procureId,
                      @Param("supplier_id") String supplierId,
                      @Param("count") int count);
+
+    @Select("SELECT * FROM tb_procure_order WHERE requester_id = #{departmentId}")
+    @Results({
+            @Result(property = "procureId", column = "procure_id"),
+            @Result(property = "equipmentTypeId", column = "equipment_type_id"),
+            @Result(property = "count", column = "count"),
+            @Result(property = "supplierId", column = "supplier_id"),
+            @Result(property = "status", column = "status"),
+            @Result(property = "requesterId", column = "requester_id"),
+            @Result(property = "createdAt", column = "created_at"),
+            @Result(property = "updatedAt", column = "updated_at"),
+            @Result(property = "reason", column = "reason")
+    })
+    List<ProcureOrder> getProcureRequestsByDepartmentId(@Param("departmentId") String departmentId);
+
+    // Insert a new procure request
+    @Insert("INSERT INTO tb_procure_order (equipment_type_id, count, supplier_id, status, requester_id, reason) " +
+            "VALUES (#{equipmentTypeId}, #{count}, #{supplierId}, #{status}, #{requesterId}, #{reason})")
+    void insertProcureRequest(ProcureOrder procureOrder);
+
+    @Update("UPDATE tb_procure_order SET status = #{status} WHERE procure_id = #{procureId}")
+    void updateProcureStatus(@Param("procureId") String procureId, @Param("status") String status);
 }

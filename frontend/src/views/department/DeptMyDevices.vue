@@ -26,7 +26,8 @@
           <div style="display:flex; gap:8px; margin-top:8px;">
             <button class="btn" @click.stop="openUsageLogs(d)">Usage Logs</button>
             <button class="btn" @click.stop="addUsage(d)">Add Usage</button>
-            <button class="btn" @click.stop="openRepair(d)">Repair</button>
+            <button class="btn" @click.stop="openRepairLog(d)">Repair Log</button>
+            <button class="btn" @click.stop="openNewRepairTicket(d)">New Repair Ticket</button>
           </div>
         </div>
       </div>
@@ -57,64 +58,65 @@
       </div>
     </div>
 
-    <!-- Add Usage Modal -->
-    <div v-if="add.open" class="modal-backdrop">
+    <!-- Repair Log Modal -->
+    <div v-if="repairLog.open" class="modal-backdrop">
       <div class="modal card">
-        <div class="title-lg">Add Usage - {{ add.device.equipmentId }}</div>
-        <div class="form-grid">
-          <div>
-            <label>Start Time</label>
-            <DateTimePicker v-model="add.form.start" :minute-step="5" :start-year="2024" :end-year="2030" />
+        <div class="title-lg">Repair Logs - {{ repairLog.device.equipmentId }}</div>
+        <div class="subtitle">Repair records for this device</div>
+
+        <div v-if="repairLog.loading" class="muted" style="margin-top:12px;">Loading...</div>
+        <div v-else-if="repairLog.error" class="muted" style="margin-top:12px; color:#b91c1c;">{{ repairLog.error }}</div>
+
+        <div v-else style="margin-top:12px; display:grid; gap:8px;">
+          <div v-for="r in repairLog.list" :key="r.ticketId" class="card" style="padding:12px;">
+            <div><b>Ticket ID:</b> {{ r.ticketId }}</div>
+            <div><b>Created At:</b> {{ fmt(r.createdAt) }}</div>
+            <div><b>Finished At:</b> {{ r.finishedAt ? fmt(r.finishedAt) : 'N/A' }}</div>
+            <div><b>Notes:</b> {{ r.notes || '-' }}</div>
+            <div><b>Cost:</b> {{ r.cost ? '$' + r.cost.toFixed(2) : 'N/A' }}</div>
+            <div><b>Status:</b> {{ r.status }}</div>
+            <div><b>Requester ID:</b> {{ r.requesterId }}</div>
+            <div><b>Manager ID:</b> {{ r.managerId }}</div>
           </div>
-          <div>
-            <label>End Time</label>
-            <DateTimePicker v-model="add.form.end" :minute-step="5" :start-year="2024" :end-year="2030" />
-          </div>
-          <div>
-            <label>Purpose</label>
-            <input class="input" v-model="add.form.purpose" placeholder="Enter purpose" />
-          </div>
-          <div>
-            <label>Status Notes</label>
-            <input class="input" v-model="add.form.remark" placeholder="Enter notes" />
-          </div>
-          <div>
-            <label>Exception</label>
-            <input class="input" v-model="add.form.exception" placeholder="Enter exception if any" />
-          </div>
+          <div v-if="repairLog.list.length === 0" class="subtitle">No repair logs</div>
         </div>
+
         <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:16px;">
-          <button class="btn" @click="closeAdd">Cancel</button>
-          <button class="btn btn-primary" @click="saveUsage">Save</button>
+          <button class="btn" @click="closeRepairLog">Close</button>
         </div>
       </div>
     </div>
 
-    <!-- Repair Modal -->
-    <div v-if="repair.open" class="modal-backdrop">
+    <!-- New Repair Ticket Modal -->
+    <div v-if="newRepairTicket.open" class="modal-backdrop">
       <div class="modal card">
-        <div class="title-lg">Repair - {{ repair.device.equipmentId }}</div>
+        <div class="title-lg">New Repair Ticket</div>
         <div class="form-grid">
           <div>
-            <label>Warranty Type</label>
-            <select class="input" v-model="repair.form.warranty">
-              <option value="In Warranty">In Warranty</option>
-              <option value="Out of Warranty">Out of Warranty</option>
+            <label>Device ID</label>
+            <input class="input" v-model="newRepairTicket.form.deviceId" placeholder="e.g. EQ-0001" />
+          </div>
+          <div>
+            <label>Type</label>
+            <select class="input" v-model="newRepairTicket.form.type">
+              <option>Repair</option>
+              <option>Maintenance</option>
+              <option>Part Replacement</option>
             </select>
           </div>
           <div style="grid-column: 1 / -1;">
             <label>Description</label>
-            <textarea class="input" v-model="repair.form.description" placeholder="Describe the issue"></textarea>
+            <textarea class="input" v-model="newRepairTicket.form.description" placeholder="Describe the issue"></textarea>
           </div>
         </div>
         <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:16px;">
-          <button class="btn" @click="closeRepair">Cancel</button>
-          <button class="btn btn-primary" @click="submitRepair">Submit</button>
+          <button class="btn" @click="closeNewRepairTicket">Cancel</button>
+          <button class="btn btn-primary" @click="saveRepairTicket">Submit</button>
         </div>
       </div>
     </div>
 
-    <!-- Detail Drawer -->
+    <!-- Device Detail Drawer -->
     <div v-if="detail.open" class="drawer-backdrop" @click="closeDetail">
       <div class="drawer card" @click.stop>
         <div class="title-lg">Device Detail</div>
@@ -262,11 +264,75 @@ async function saveUsage() {
   }
 }
 
+// Repair Log Modal
+const repairLog = reactive({ open: false, device: {}, list: [], loading: false, error: '' })
+function openRepairLog(d) { repairLog.open = true; repairLog.device = d; fetchRepairLogs(d.equipmentId) }
+function closeRepairLog() { repairLog.open = false }
+
+async function fetchRepairLogs(equipmentId) {
+  repairLog.loading = true
+  try {
+    const response = await axios.get('/req/dept/repair/logs', { params: { equipmentId } })
+    console.log(response.data);
+
+    // 处理返回的数据
+    if (Array.isArray(response.data) && response.data.length > 0) {
+      // 设置维修日志数据
+      repairLog.list = response.data.map(item => ({
+        ticketId: item.ticketId,
+        createdAt: item.createdAt,
+        finishedAt: item.finishedAt,
+        notes: item.notes,
+        cost: item.cost,
+        result: item.result,
+        status: item.status,
+        departmentId: item.departmentId,
+        requesterId: item.requesterId,
+        managerId: item.managerId,
+        equipmentId: item.equipmentId,
+      }));
+    } else {
+      repairLog.list = [];
+    }
+  } catch (err) {
+    console.error(err)
+    repairLog.error = 'Failed to load repair logs'
+  } finally {
+    repairLog.loading = false
+  }
+}
+
 // Repair Modal
-const repair = reactive({ open: false, device: {}, form: { warranty: 'In Warranty', description: '' } })
-function openRepair(d) { repair.open = true; repair.device = d }
-function closeRepair() { repair.open = false }
-function submitRepair() { alert('Repair submitted (demo only)'); closeRepair() }
+const newRepairTicket = reactive({ open: false, form: { deviceId: '',departmentId: '', type: 'Repair', description: '' } })
+function openNewRepairTicket(d) {
+  newRepairTicket.open = true;
+  newRepairTicket.form.deviceId = d.equipmentId
+  newRepairTicket.form.departmentId = d.departmentId
+  newRepairTicket.form.type = 'Repair'
+  newRepairTicket.form.description = ''
+}
+function closeNewRepairTicket() { newRepairTicket.open = false }
+
+async function saveRepairTicket() {
+  try {
+    const repairTicketData = {
+      equipmentId: newRepairTicket.form.deviceId,
+      notes: newRepairTicket.form.description,
+      cost: 0,
+      result: '',
+      status: 'Pending',
+      departmentId: newRepairTicket.form.departmentId,
+      requesterId: '2',
+      managerId: ''
+    };
+    await axios.post('/req/dept/repair/logs', repairTicketData)
+    alert("Repair ticket submitted successfully!")
+    closeNewRepairTicket()
+  } catch (error) {
+    console.error(error)
+    alert("Failed to submit repair ticket.")
+  }
+}
 
 // Device Detail Drawer
 const detail = reactive({ open: false, device: {} })

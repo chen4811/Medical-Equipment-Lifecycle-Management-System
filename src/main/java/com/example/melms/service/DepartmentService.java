@@ -1,15 +1,12 @@
 package com.example.melms.service;
 
-import com.example.melms.mapper.DepartmentMapper;
-import com.example.melms.pojo.Department;
-import com.example.melms.mapper.EquipmentMapper;
-import com.example.melms.mapper.LogMapper;
-import com.example.melms.mapper.RepairTicketMapper;
-import com.example.melms.pojo.Equipment;
-import com.example.melms.pojo.UsageLog;
+import com.example.melms.mapper.*;
+import com.example.melms.pojo.*;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -20,6 +17,9 @@ public class DepartmentService {
 
     @Resource
     private EquipmentMapper equipmentMapper;
+
+    @Resource
+    private ProcurementMapper procurementMapper;
 
     @Resource
     private LogMapper logMapper;
@@ -84,6 +84,48 @@ public class DepartmentService {
             e.printStackTrace();
             return false;
         }
+    }
+
+
+    public List<RepairTicket> getRepairLogs(String equipmentId) {
+        return repairTicketMapper.getRepairLogsByEquipmentId(equipmentId);
+    }
+
+    public List<RepairTicket> getRepairLogsByDepartment(String departmentId) {
+        return repairTicketMapper.getRepairLogsByDepartmentId(departmentId);
+    }
+
+    public String generateNewTicketId() {
+        String maxTicketId = repairTicketMapper.getMaxTicketId(); // 查询最大 ticket_id
+        int nextId = 1;
+
+        if (maxTicketId != null) {
+            String numberPart = maxTicketId.substring(1);
+            nextId = Integer.parseInt(numberPart) + 1;
+        }
+
+        // 格式化新 ticket_id，保持 4 位数字格式
+        return String.format("T%04d", nextId);
+    }
+
+    public void createRepairTicket(RepairTicket repairTicket) {
+        String newTicketId = generateNewTicketId();
+        repairTicket.setTicketId(newTicketId);
+
+        repairTicketMapper.insertRepairTicket(repairTicket);
+    }
+
+    public List<ProcureOrder> getProcureRequestsByDepartment(String departmentId) {
+        return procurementMapper.getProcureRequestsByDepartmentId(departmentId);
+    }
+
+    // Create a new procure request
+    public void createProcureRequest(ProcureOrder procureRequest) {
+        procurementMapper.insertProcureRequest(procureRequest);
+    }
+
+    public void updateProcureStatus(String procureId, String status) {
+        procurementMapper.updateProcureStatus(procureId, status);
     }
 }
 

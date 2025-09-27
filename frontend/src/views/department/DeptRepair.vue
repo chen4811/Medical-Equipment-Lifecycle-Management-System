@@ -14,11 +14,11 @@
       </select>
       <select class="input" v-model="filters.status">
         <option value="">All status</option>
-        <option>Pending Review</option>
-        <option>In Repair</option>
-        <option>In Acceptance</option>
-        <option>Completed</option>
-        <option>Rejected</option>
+        <option value="pending">Pending</option>
+        <option value="in-progress">In Repair</option>
+        <option value="under-acceptance">In Acceptance</option>
+        <option value="completed">Completed</option>
+        <option value="rejected">Rejected</option>
       </select>
       <div style="display:flex; gap:8px;">
         <button class="btn" @click="resetFilters">Reset</button>
@@ -30,32 +30,32 @@
     <div class="table-wrapper" style="margin-top:16px; overflow:auto;">
       <table class="table">
         <thead>
-          <tr>
-            <th>ID</th>
-            <th>Device</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Status</th>
-            <th>Created</th>
-            <th style="width:160px;">Actions</th>
-          </tr>
+        <tr>
+          <th>ID</th>
+          <th>Device</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th style="width:160px;">Actions</th>
+        </tr>
         </thead>
         <tbody>
-          <tr v-for="t in filtered" :key="t.id">
-            <td>{{ t.id }}</td>
-            <td>{{ t.deviceId }}</td>
-            <td>{{ t.type }}</td>
-            <td>{{ t.description }}</td>
-            <td>{{ t.status }}</td>
-            <td>{{ fmt(t.createdAt) }}</td>
-            <td>
-              <button class="btn" @click="accept(t)" v-if="t.status==='In Acceptance'">Confirm</button>
-              <button class="btn" @click="view(t)" v-else>View</button>
-            </td>
-          </tr>
-          <tr v-if="filtered.length===0">
-            <td colspan="7" style="text-align:center; color:var(--color-muted);">No tickets</td>
-          </tr>
+        <tr v-for="t in filtered" :key="t.ticketId">
+          <td>{{ t.ticketId }}</td>
+          <td>{{ t.equipmentId }}</td>
+          <td>{{ t.type || 'Repair' }}</td>
+          <td>{{ t.notes }}</td>
+          <td>{{ t.status }}</td>
+          <td>{{ fmt(t.createdAt) }}</td>
+          <td>
+            <button class="btn" @click="accept(t)" v-if="t.status === 'In Acceptance'">Confirm</button>
+            <button class="btn" @click="view(t)" v-else>View</button>
+          </td>
+        </tr>
+        <tr v-if="filtered.length === 0">
+          <td colspan="7" style="text-align:center; color:var(--color-muted);">No tickets</td>
+        </tr>
         </tbody>
       </table>
     </div>
@@ -92,46 +92,151 @@
 </template>
 
 <script setup>
-import { reactive, computed } from 'vue'
-import { clone, deptRepairTickets as seed } from '@/mocks/department.js'
+import { reactive, computed, onMounted } from 'vue';
+import axios from 'axios';
 
-const state = reactive({ list: clone(seed) })
-const filters = reactive({ keyword: '', type: '', status: '' })
+// Initialize the state and filters
+const state = reactive({
+  list: []
+});
+const filters = reactive({
+  keyword: '',
+  type: '',
+  status: ''
+});
+const modal = reactive({
+  open: false,
+  form: {
+    deviceId: '',
+    type: 'Repair',
+    description: ''
+  }
+});
 
+// Filtered tickets based on filters
 const filtered = computed(() => {
-  const kw = filters.keyword.toLowerCase()
+  const kw = filters.keyword.toLowerCase();
   return state.list.filter(t => {
-    const matchKw = !kw || `${t.id} ${t.deviceId} ${t.description}`.toLowerCase().includes(kw)
-    const matchType = !filters.type || t.type === filters.type
-    const matchStatus = !filters.status || t.status === filters.status
-    return matchKw && matchType && matchStatus
-  })
-})
+    const matchKw = !kw || `${t.id} ${t.deviceId} ${t.description}`.toLowerCase().includes(kw);
+    const matchType = !filters.type || t.type === filters.type;
+    const matchStatus = !filters.status || t.status === filters.status;
+    return matchKw && matchType && matchStatus;
+  });
+});
 
-function resetFilters() { filters.keyword=''; filters.type=''; filters.status='' }
-
-const modal = reactive({ open: false, form: { deviceId: '', type: 'Repair', description: '' } })
-function openCreate() { modal.open = true; modal.form = { deviceId: '', type: 'Repair', description: '' } }
-function closeCreate() { modal.open = false }
-function save() {
-  const id = `DR-${String(Math.floor(Math.random()*100000)).padStart(4,'0')}`
-  const createdAt = new Date().toISOString()
-  state.list.unshift({ id, createdAt, status: 'Pending Review', ...modal.form })
-  closeCreate()
+// Fetch repair tickets for a specific department
+async function fetchRepairTickets(departmentId) {
+  try {
+    const response = await axios.get('/req/dept/repair/logs/id', { params: { departmentId } });
+    state.list = response.data;
+  } catch (error) {
+    console.error("Failed to fetch repair tickets:", error);
+  }
 }
 
-function accept(t) { t.status = 'Completed' }
-function view(t) { alert(`View ${t.id} (demo only)`) }
+// Reset filters
+function resetFilters() {
+  filters.keyword = '';
+  filters.type = '';
+  filters.status = '';
+}
 
-function fmt(ts) { try { return new Date(ts).toLocaleString() } catch { return ts } }
+// Open modal to create a new repair ticket
+function openCreate() {
+  modal.open = true;
+  modal.form = { deviceId: '', type: 'Repair', description: '' };
+}
+
+// Close the modal for creating a new repair ticket
+function closeCreate() {
+  modal.open = false;
+}
+
+// Save new repair ticket
+async function save() {
+  try {
+    const repairTicketData = {
+      equipmentId: modal.form.deviceId,
+      notes: modal.form.description,
+      cost: 0,
+      result: '',
+      status: 'Pending',
+      departmentId: "0001",
+      requesterId: '2',
+      managerId: ''
+    };
+    await axios.post('/req/dept/repair/logs', repairTicketData);
+    alert("Repair ticket submitted successfully!");
+    closeCreate();
+    fetchRepairTickets(modal.form.departmentId); // Fetch updated tickets
+  } catch (error) {
+    console.error(error);
+    alert("Failed to submit repair ticket.");
+  }
+}
+
+// Mark ticket as completed
+function accept(t) {
+  t.status = 'Completed';
+}
+
+// View ticket details (demo placeholder)
+function view(t) {
+  alert(`View ${t.id} (demo only)`);
+}
+
+// Format date to local string
+function fmt(ts) {
+  try {
+    return new Date(ts).toLocaleString();
+  } catch {
+    return ts;
+  }
+}
+
+// Fetch tickets when component is mounted
+onMounted(() => {
+  const departmentId = '0001';
+  fetchRepairTickets(departmentId);
+});
 </script>
 
 <style scoped>
-.table { width: 100%; border-collapse: collapse; }
-.table th, .table td { padding: 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: left; white-space: nowrap; }
-.table th { background: #f9fafb; font-weight: 700; }
-.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; padding:16px; }
-.modal { width: min(720px, 100%); padding: 16px; }
-.form-grid { margin-top: 16px; display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
-textarea.input { height: 120px; resize: vertical; }
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.table th, .table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+  white-space: nowrap;
+}
+.table th {
+  background: #f9fafb;
+  font-weight: 700;
+}
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.modal {
+  width: min(720px, 100%);
+  padding: 16px;
+}
+.form-grid {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+textarea.input {
+  height: 120px;
+  resize: vertical;
+}
 </style>

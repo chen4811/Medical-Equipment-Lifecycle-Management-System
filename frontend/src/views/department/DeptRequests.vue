@@ -5,12 +5,14 @@
 
     <!-- Filters & Create -->
     <div class="filters" style="margin-top:16px; display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px;">
-      <input class="input" v-model="filters.keyword" placeholder="Search by id/content" />
+      <input class="input" v-model="filters.keyword" placeholder="Search by ID/content" />
       <select class="input" v-model="filters.status">
-        <option value="">All status</option>
-        <option>Pending</option>
-        <option>Approved</option>
-        <option>Rejected</option>
+        <option value="">All Status</option>
+        <option value="under-review">Under Review</option>
+        <option value="procuring">Procuring</option>
+        <option value="arrived">Arrived</option>
+        <option value="terminated">Terminated</option>
+        <option value="finished">Finished</option>
       </select>
       <div style="display:flex; gap:8px;">
         <button class="btn" @click="resetFilters">Reset</button>
@@ -22,28 +24,32 @@
     <div class="table-wrapper" style="margin-top:16px; overflow:auto;">
       <table class="table" style="table-layout:fixed; width:100%;">
         <thead>
-          <tr>
-            <th>ID</th>
-            <th>Kind</th>
-            <th>Content</th>
-            <th>Status</th>
-            <th style="width:140px;">Actions</th>
-          </tr>
+        <tr>
+          <th>ID</th>
+          <th>Equipment Type</th>
+          <th>Count</th>
+          <th>Status</th>
+          <th>Reason</th>
+          <th>Created At</th>
+          <th style="width:140px;">Actions</th>
+        </tr>
         </thead>
         <tbody>
-          <tr v-for="r in filtered" :key="r.id">
-            <td>{{ r.id }}</td>
-            <td>{{ r.kind }}</td>
-            <td>{{ r.content }}</td>
-            <td>{{ r.status }}</td>
-            <td style="white-space:nowrap;">
-              <button class="btn btn-red" @click="cancel(r)" v-if="r.status==='Pending'">Cancel</button>
-              <button class="btn btn-green" v-else @click="view(r)">View</button>
-            </td>
-          </tr>
-          <tr v-if="filtered.length===0">
-            <td colspan="5" style="text-align:center; color:var(--color-muted);">No requests</td>
-          </tr>
+        <tr v-for="r in filtered" :key="r.procureId">
+          <td>{{ r.procureId }}</td>
+          <td>{{ r.equipmentTypeId }}</td>
+          <td>{{ r.count }}</td>
+          <td>{{ r.status }}</td>
+          <td>{{ r.reason }}</td>
+          <td>{{ fmt(r.createdAt) }}</td>
+          <td style="white-space:nowrap;">
+            <button class="btn btn-red" @click="cancel(r)" v-if="r.status === 'under-review'">Cancel</button>
+            <button class="btn btn-green" v-else @click="view(r)">View</button>
+          </td>
+        </tr>
+        <tr v-if="filtered.length === 0">
+          <td colspan="7" style="text-align:center; color:var(--color-muted);">No requests</td>
+        </tr>
         </tbody>
       </table>
     </div>
@@ -54,17 +60,20 @@
         <div class="title-lg">New Equipment Request</div>
         <div class="form-grid">
           <div>
-            <label>Kind</label>
-            <select class="input" v-model="modal.form.kind">
-              <option>New Device</option>
-              <option>Accessory</option>
-              <option>Consumables</option>
-              <option>Upgrade</option>
-            </select>
+            <label>Equipment Type</label>
+            <input class="input" v-model="modal.form.equipmentTypeId" placeholder="e.g. Laptop, Monitor" />
+          </div>
+          <div>
+            <label>Count</label>
+            <input class="input" v-model="modal.form.count" type="number" placeholder="e.g. 5" />
+          </div>
+          <div>
+            <label>Supplier</label>
+            <input class="input" v-model="modal.form.supplierId" placeholder="e.g. ABC Supplier" />
           </div>
           <div style="grid-column: 1 / -1;">
-            <label>Content</label>
-            <textarea class="input" v-model="modal.form.content" placeholder="Describe your need, quantity, preferred vendor, budget, etc."></textarea>
+            <label>Reason</label>
+            <textarea class="input" v-model="modal.form.reason" placeholder="Describe your need, quantity, preferred vendor, budget, etc."></textarea>
           </div>
         </div>
         <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:16px;">
@@ -77,42 +86,162 @@
 </template>
 
 <script setup>
-import { reactive, computed } from 'vue'
-import { clone, deptRequests as seed } from '@/mocks/department.js'
+import { reactive, computed, onMounted } from 'vue';
+import axios from 'axios';
 
-const state = reactive({ list: clone(seed) })
-const filters = reactive({ keyword: '', status: '' })
+// State and filters
+const state = reactive({
+  list: []
+});
+const filters = reactive({
+  keyword: '',
+  status: ''
+});
 
 const filtered = computed(() => {
-  const kw = filters.keyword.toLowerCase()
+  const kw = filters.keyword.toLowerCase();
   return state.list.filter(r => {
-    const matchKw = !kw || `${r.id} ${r.content}`.toLowerCase().includes(kw)
-    const matchStatus = !filters.status || r.status === filters.status
-    return matchKw && matchStatus
-  })
-})
+    const matchKw = !kw || `${r.procureId} ${r.reason}`.toLowerCase().includes(kw);
+    const matchStatus = !filters.status || r.status === filters.status;
+    return matchKw && matchStatus;
+  });
+});
 
-function resetFilters() { filters.keyword=''; filters.status='' }
-
-const modal = reactive({ open: false, form: { kind: 'New Device', content: '' } })
-function openCreate() { modal.open = true; modal.form = { kind: 'New Device', content: '' } }
-function closeCreate() { modal.open = false }
-function save() {
-  const id = `REQ-${String(Math.floor(Math.random()*100000)).padStart(4,'0')}`
-  state.list.unshift({ id, status: 'Pending', ...modal.form })
-  closeCreate()
+// Reset filters
+function resetFilters() {
+  filters.keyword = '';
+  filters.status = '';
 }
 
-function cancel(r) { r.status = 'Rejected' }
-function view(r) { alert(`View ${r.id} (demo only)`) }
+// Modal for creating new request
+const modal = reactive({
+  open: false,
+  form: {
+    equipmentTypeId: '',
+    count: '',
+    supplierId: '',
+    reason: ''
+  }
+});
+
+function openCreate() {
+  modal.open = true;
+  modal.form = { equipmentTypeId: '', count: '', supplierId: '', reason: '' };
+}
+
+function closeCreate() {
+  modal.open = false;
+}
+
+// Save a new equipment request
+async function save() {
+  try {
+    const procureRequestData = {
+      equipmentTypeId: modal.form.equipmentTypeId,
+      count: modal.form.count,
+      supplierId: modal.form.supplierId,
+      status: 'under-review',
+      reason: modal.form.reason,
+      requesterId: '0001',  // Update with actual requester ID
+    };
+
+    const response = await axios.post('/req/dept/procure/logs', procureRequestData);
+    alert("Request submitted successfully!");
+    closeCreate();
+    fetchProcureRequests();  // Refresh the list after submission
+  } catch (error) {
+    console.error(error);
+    alert("Failed to submit request.");
+  }
+}
+
+// Cancel the request
+async function cancel(r) {
+  try {
+    // 更新请求的状态为 Terminated
+    r.status = 'terminated';
+
+    // 发送 PUT 请求更新状态到数据库
+    const response = await axios.put(`/req/dept/procure/logs/${r.procureId}`, {
+      status: 'terminated'
+    });
+
+    // 如果更新成功
+    alert('Request canceled successfully!');
+  } catch (error) {
+    console.error(error);
+    alert('Failed to cancel the request.');
+  }
+}
+
+// View the request details (demo placeholder)
+function view(r) {
+  alert(`View ${r.procureId} (demo only)`);
+}
+
+// Fetch procurement requests for the department
+async function fetchProcureRequests() {
+  try {
+    const departmentId = '0001';  // Update with actual department ID
+    const response = await axios.get('/req/dept/procure/logs', { params: { departmentId } });
+    state.list = response.data;
+  } catch (error) {
+    console.error("Failed to fetch procure requests:", error);
+  }
+}
+
+// Format date for display
+function fmt(ts) {
+  try {
+    return new Date(ts).toLocaleString();
+  } catch {
+    return ts;
+  }
+}
+
+// Fetch requests on component mount
+onMounted(() => {
+  fetchProcureRequests(); // Fetch data for the current department
+});
 </script>
 
 <style scoped>
-.table { width: 100%; border-collapse: collapse; }
-.table th, .table td { padding: 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: left; white-space: normal; word-break: break-word; }
-.table th { background: #f9fafb; font-weight: 700; }
-.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; padding:16px; }
-.modal { width: min(720px, 100%); padding: 16px; }
-.form-grid { margin-top: 16px; display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
-textarea.input { height: 120px; resize: vertical; }
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.table th, .table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+  white-space: normal;
+  word-break: break-word;
+}
+.table th {
+  background: #f9fafb;
+  font-weight: 700;
+}
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.modal {
+  width: min(720px, 100%);
+  padding: 16px;
+}
+.form-grid {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+textarea.input {
+  height: 120px;
+  resize: vertical;
+}
 </style>
