@@ -41,7 +41,7 @@ public interface EquipmentMapper {
             "LEFT JOIN tb_equipment_type t ON e.equipment_type_id = t.equipment_type_id " +
             "LEFT JOIN tb_department d ON e.department_id = d.department_id " +
             "WHERE e.equipment_id = #{equipmentId}")
-    Equipment findById(String equipmentId);
+    Equipment findById(Integer equipmentId);
 
     @Insert("INSERT INTO tb_equipment(equipment_id, equipment_type_id, status, user_manual_path, warranty_certificate_path, supplier_id, department_id, pic_url) " +
             "VALUES(#{equipmentId}, #{equipmentTypeId}, #{status}, #{userManualPath}, #{warrantyCertificatePath}, #{supplierId}, #{departmentId}, #{picUrl})")
@@ -99,4 +99,24 @@ public interface EquipmentMapper {
             "</script>")
     List<Equipment> getEquipments(@Param("departmentId") String departmentId, @Param("status") String status,
                             @Param("keyword") String keyword);
+
+
+    @Insert("INSERT INTO tb_equipment (equipment_type_id, status, supplier_id) " +
+            "VALUES (#{equipmentTypeId}, #{status}, #{supplierId})")
+    void insertEquipment(Equipment equipment);
+
+    @Update("UPDATE tb_procure_order SET status = 'finished' WHERE procure_id = #{procureId}")
+    void markOrderFinished(@Param("procureId") Integer procureId);
+
+
+    @Update("UPDATE tb_equipment SET department_id = #{departmentId}, status = #{status} WHERE equipment_id = #{id}")
+    void updateDepartmentAndStatus(@Param("id") Integer id,
+                                  @Param("departmentId") Integer departmentId,
+                                  @Param("status") String status);
+
+    @Update("UPDATE tb_equipment SET user_manual_path = #{path} WHERE equipment_id = #{id}")
+    void updateManualPath(@Param("id") Integer id, @Param("path") String path);
+
+    @Update("UPDATE tb_equipment SET warranty_certificate_path = #{path} WHERE equipment_id = #{id}")
+    void updateWarrantyPath(@Param("id") Integer id, @Param("path") String path);
 }

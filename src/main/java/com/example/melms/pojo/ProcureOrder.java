@@ -6,7 +6,7 @@ import java.util.Date;
 @Data
 
 public class ProcureOrder {
-    private String procureId;
+    private Integer procureId;
     private String equipmentTypeId;
     private Integer count;
     private String supplierId;

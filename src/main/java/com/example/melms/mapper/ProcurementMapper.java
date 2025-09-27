@@ -102,6 +102,9 @@ public interface ProcurementMapper {
                      @Param("supplier_id") String supplierId,
                      @Param("count") int count);
 
+    @Select("SELECT * FROM tb_procure_order WHERE status = 'arrived'")
+    List<ProcureOrder> getArrivedOrders();
+
     @Select("SELECT * FROM tb_procure_order WHERE requester_id = #{departmentId}")
     @Results({
             @Result(property = "procureId", column = "procure_id"),
