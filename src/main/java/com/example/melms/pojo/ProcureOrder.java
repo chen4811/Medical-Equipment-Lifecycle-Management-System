@@ -6,12 +6,14 @@ import java.util.Date;
 @Data
 
 public class ProcureOrder {
-    private Integer procureId;
+    private int procureId;
     private String equipmentTypeId;
-    private Integer count;
+    private String equipmentTypeName;
+    private int count;
     private String supplierId;
+    private String supplierName;
     private String status;
-    private String requesterId;
+    private int requesterId;
     private String reason;
     private Date createdAt;
     private Date updatedAt;

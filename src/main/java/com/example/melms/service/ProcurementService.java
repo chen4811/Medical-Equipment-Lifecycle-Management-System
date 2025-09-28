@@ -12,6 +12,8 @@ public class ProcurementService {
     private ProcurementMapper procurementMapper;
 
     public List<ProcureOrder> getArrivedOrders() {
-        return procurementMapper.getArrivedOrders();
+        List<ProcureOrder> procureOrders = procurementMapper.getArrivedOrders();
+        System.out.println(procureOrders);
+        return procureOrders;
     }
 }

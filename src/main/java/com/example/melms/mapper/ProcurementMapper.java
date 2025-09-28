@@ -102,7 +102,24 @@ public interface ProcurementMapper {
                      @Param("supplier_id") String supplierId,
                      @Param("count") int count);
 
-    @Select("SELECT * FROM tb_procure_order WHERE status = 'arrived'")
+    @Select("""
+    SELECT
+        o.procure_id AS procureId,
+        o.equipment_type_id AS equipmentTypeId,
+        t.equipment_type_name AS equipmentTypeName,
+        o.count,
+        o.supplier_id AS supplierId,
+        s.supplier_name AS supplierName,
+        o.status,
+        o.requester_id AS requesterId,
+        o.reason,
+        o.created_at AS createdAt,
+        o.updated_at AS updatedAt
+    FROM tb_procure_order o
+    LEFT JOIN tb_equipment_type t ON o.equipment_type_id = t.equipment_type_id
+    LEFT JOIN tb_supplier s ON o.supplier_id = s.supplier_id
+    WHERE o.status = 'arrived'
+""")
     List<ProcureOrder> getArrivedOrders();
 
     @Select("SELECT * FROM tb_procure_order WHERE requester_id = #{requesterId}")
