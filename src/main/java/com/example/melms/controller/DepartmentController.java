@@ -21,14 +21,19 @@ public class DepartmentController {
     @Resource
     private DepartmentService departmentService;
 
+    @GetMapping("/department/id")
+    public Object getDepartmentByAccountId(@RequestParam("accountId") Long accountId) {
+        return departmentService.getDepartmentId(accountId);
+    }
+
     @GetMapping("/dept/dashboard/stats")
-    public Object getDashboardStats() {
-        return departmentService.getDashboardStats();
+    public Object getDashboardStats(@RequestParam("departmentId") String departmentId) {
+        return departmentService.getDashboardStats(departmentId);
     }
 
     @GetMapping("/dept/usage/logs")
-    public List<UsageLog> getUsageLogs(@RequestParam("equipmentId") String equipmentId) {
-        return departmentService.getUsageLogsByEquipmentId(equipmentId);
+    public List<UsageLog> getUsageLogs(@RequestParam("recorderId") String recorderId) {
+        return departmentService.getUsageLogsByEquipmentId(recorderId);
     }
 
     @PostMapping("/dept/usage/logs")
@@ -59,8 +64,8 @@ public class DepartmentController {
     }
 
     @GetMapping("/dept/procure/logs")
-    public List<ProcureOrder> getProcureRequests(@RequestParam("departmentId") String departmentId) {
-        return departmentService.getProcureRequestsByDepartment(departmentId);
+    public List<ProcureOrder> getProcureRequests(@RequestParam("requesterId") String requesterId) {
+        return departmentService.getProcureRequestsByDepartment(requesterId);
     }
 
     // Create a new procurement request

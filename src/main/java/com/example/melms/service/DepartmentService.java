@@ -47,20 +47,17 @@ public class DepartmentService {
         return departmentMapper.delete(id);
     }
 
-    public Map<String, Object> getDashboardStats() {
+    public Object getDepartmentId(Long accountId) {
+        return departmentMapper.findDepartmentIdByAccountId(accountId);
+    }
 
-        // 获取尚未确认的维修单数量（针对当前部门）
-        // 假设当前部门ID在用户信息或上下文中获取
-        String departmentId = "0001";  // 这里可以通过实际的上下文获取当前用户所在的部门
+    public Map<String, Object> getDashboardStats(String departmentId) {
         int todosRepair = repairTicketMapper.countPendingRepairTickets(departmentId);
-        // 获取设备统计信息
+
         int inUse = equipmentMapper.countDevicesByStatus("using", departmentId);  // 正在使用的设备数量
         int underRepair = equipmentMapper.countDevicesByStatus("repairing", departmentId);  // 维修中的设备数量
-
-        // 获取今天的使用日志数量
         int todosUsage = logMapper.countLogsForToday(departmentId);
 
-        // 返回统计数据
         return Map.of(
                 "inUse", inUse,
                 "underRepair", underRepair,
@@ -69,8 +66,8 @@ public class DepartmentService {
         );
     }
 
-    public List<UsageLog> getUsageLogsByEquipmentId(String equipmentId) {
-        return departmentMapper.findByTargetEquipmentId(equipmentId);
+    public List<UsageLog> getUsageLogsByEquipmentId(String recorderId) {
+        return departmentMapper.findByTargetEquipmentId(recorderId);
     }
 
     public boolean addUsageLog(UsageLog usageLog) {
@@ -115,8 +112,8 @@ public class DepartmentService {
         repairTicketMapper.insertRepairTicket(repairTicket);
     }
 
-    public List<ProcureOrder> getProcureRequestsByDepartment(String departmentId) {
-        return procurementMapper.getProcureRequestsByDepartmentId(departmentId);
+    public List<ProcureOrder> getProcureRequestsByDepartment(String requesterId) {
+        return procurementMapper.getProcureRequestsByDepartmentId(requesterId);
     }
 
     // Create a new procure request

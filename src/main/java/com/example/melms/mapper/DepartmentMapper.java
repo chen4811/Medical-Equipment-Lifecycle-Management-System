@@ -27,7 +27,7 @@ public interface DepartmentMapper {
     int delete(Integer id);
 
     @Select("SELECT log_id, recorder_id, target_equipment_id, remark, time " +
-            "FROM tb_usage_logging WHERE target_equipment_id = #{equipmentId}")
+            "FROM tb_usage_logging WHERE recorder_id = #{recorderId}")
     @Results({
             @Result(property = "logId", column = "log_id"),
             @Result(property = "recorderId", column = "recorder_id"),
@@ -35,10 +35,13 @@ public interface DepartmentMapper {
             @Result(property = "remark", column = "remark"),
             @Result(property = "time", column = "time")
     })
-    List<UsageLog> findByTargetEquipmentId(@Param("equipmentId") String equipmentId);
+    List<UsageLog> findByTargetEquipmentId(@Param("recorderId") String recorderId);
 
     @Insert("INSERT INTO tb_usage_logging (recorder_id, target_equipment_id, remark, time) " +
             "VALUES (#{recorderId}, #{targetEquipmentId}, #{remark}, CURRENT_TIMESTAMP)")
     void insertUsageLog(UsageLog usageLog);
+
+    @Select("SELECT department_id FROM tb_account WHERE account_id = #{accountId}")
+    Object findDepartmentIdByAccountId(Long accountId);
 }
 

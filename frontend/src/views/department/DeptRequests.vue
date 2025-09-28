@@ -86,7 +86,7 @@
 </template>
 
 <script setup>
-import { reactive, computed, onMounted } from 'vue';
+import {reactive, computed, onMounted, ref} from 'vue';
 import axios from 'axios';
 
 // State and filters
@@ -106,6 +106,21 @@ const filtered = computed(() => {
     return matchKw && matchStatus;
   });
 });
+
+const departmentId = ref(null)
+const accountId = Number(localStorage.getItem('account_id') || 'θ')
+
+const getDepartmentId = async (accountId) => {
+  try {
+    const response = await axios.get(`/req/department/id`, {
+      params: { accountId }
+    })
+    console.log(response.data);
+    departmentId.value = response.data
+  } catch (error) {
+    console.error('Error fetching department ID:', error)
+  }
+}
 
 // Reset filters
 function resetFilters() {
@@ -142,7 +157,7 @@ async function save() {
       supplierId: modal.form.supplierId,
       status: 'under-review',
       reason: modal.form.reason,
-      requesterId: '0001',  // Update with actual requester ID
+      requesterId: accountId,  // Update with actual requester ID
     };
 
     const response = await axios.post('/req/dept/procure/logs', procureRequestData);
@@ -180,8 +195,8 @@ function view(r) { showDialog(`View ${r.procureId} (demo only)`) }
 // Fetch procurement requests for the department
 async function fetchProcureRequests() {
   try {
-    const departmentId = '0001';  // Update with actual department ID
-    const response = await axios.get('/req/dept/procure/logs', { params: { departmentId } });
+    const requesterId = accountId;
+    const response = await axios.get('/req/dept/procure/logs', { params: { requesterId } });
     state.list = response.data;
   } catch (error) {
     console.error("Failed to fetch procure requests:", error);
@@ -198,8 +213,11 @@ function fmt(ts) {
 }
 
 // Fetch requests on component mount
-onMounted(() => {
-  fetchProcureRequests(); // Fetch data for the current department
+onMounted(async () => {
+  if (accountId !== 'θ') {
+    await getDepartmentId(accountId)
+  }
+  await fetchProcureRequests(); // Fetch data for the current department
 });
 function showDialog(message) {
   let overlay = document.createElement('div')

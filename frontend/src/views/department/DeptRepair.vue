@@ -92,7 +92,7 @@
 </template>
 
 <script setup>
-import { reactive, computed, onMounted } from 'vue';
+import {reactive, computed, onMounted, ref} from 'vue';
 import axios from 'axios';
 
 // Initialize the state and filters
@@ -112,6 +112,21 @@ const modal = reactive({
     description: ''
   }
 });
+
+const departmentId = ref(null)
+const accountId = Number(localStorage.getItem('account_id') || 'θ')
+
+const getDepartmentId = async (accountId) => {
+  try {
+    const response = await axios.get(`/req/department/id`, {
+      params: { accountId }
+    })
+    console.log(response.data);
+    departmentId.value = response.data
+  } catch (error) {
+    console.error('Error fetching department ID:', error)
+  }
+}
 
 // Filtered tickets based on filters
 const filtered = computed(() => {
@@ -161,7 +176,7 @@ async function save() {
       cost: 0,
       result: '',
       status: 'Pending',
-      departmentId: "0001",
+      departmentId: departmentId.value,
       requesterId: '2',
       managerId: ''
     };
@@ -193,9 +208,12 @@ function fmt(ts) {
 }
 
 // Fetch tickets when component is mounted
-onMounted(() => {
-  const departmentId = '0001';
-  fetchRepairTickets(departmentId);
+onMounted(async () => {
+  // 获取 departmentId
+  if (accountId !== 'θ') {
+    await getDepartmentId(accountId)
+  }
+  await fetchRepairTickets(departmentId.value);
 });
 function showDialog(message) {
   let overlay = document.createElement('div')

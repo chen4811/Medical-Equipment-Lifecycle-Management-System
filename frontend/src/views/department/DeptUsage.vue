@@ -29,7 +29,7 @@
           <tr v-for="r in rows" :key="r.id">
             <td>{{ fmt(r.time) }}</td>
             <td>{{ r.recorderId }}</td>
-            <td>{{ r.equipmentId }}</td>
+            <td>{{ r.targetEquipmentId }}</td>
             <td>{{ r.remark }}</td>
           </tr>
           <tr v-if="rows.length===0"><td colspan="4">No logs</td></tr>
@@ -68,14 +68,16 @@ const filters = reactive({ keyword: '', date: '' })
 const rows = reactive([])
 const modal = reactive({ open: false, form: { deviceId:'', remark:'' } })
 const deviceOptions = ref([])
+const accountId = Number(localStorage.getItem('account_id') || 'θ')
+
 function resetFilters(){ filters.keyword=''; filters.date=''; fetchLogs() }
 function openCreate(){ modal.open=true; modal.form={ deviceId:(deviceOptions.value[0]?.value||''), remark:'' } }
 function closeCreate(){ modal.open=false }
+
 async function fetchLogs(){
   try {
-    // 需要 equipmentId 参数，若未选则不请求
     if (!modal.form.deviceId) return
-    const r = await axios.get('/req/dept/usage/logs', { params: { equipmentId: modal.form.deviceId } })
+    const r = await axios.get('/req/dept/usage/logs', { params: { recorderId: accountId } })
     rows.splice(0, rows.length, ...(r.data || []))
   } catch {}
 }

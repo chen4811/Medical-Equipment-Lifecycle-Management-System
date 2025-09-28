@@ -105,7 +105,7 @@ public interface ProcurementMapper {
     @Select("SELECT * FROM tb_procure_order WHERE status = 'arrived'")
     List<ProcureOrder> getArrivedOrders();
 
-    @Select("SELECT * FROM tb_procure_order WHERE requester_id = #{departmentId}")
+    @Select("SELECT * FROM tb_procure_order WHERE requester_id = #{requesterId}")
     @Results({
             @Result(property = "procureId", column = "procure_id"),
             @Result(property = "equipmentTypeId", column = "equipment_type_id"),
@@ -117,7 +117,7 @@ public interface ProcurementMapper {
             @Result(property = "updatedAt", column = "updated_at"),
             @Result(property = "reason", column = "reason")
     })
-    List<ProcureOrder> getProcureRequestsByDepartmentId(@Param("departmentId") String departmentId);
+    List<ProcureOrder> getProcureRequestsByDepartmentId(@Param("requesterId") String requesterId);
 
     // Insert a new procure request
     @Insert("INSERT INTO tb_procure_order (equipment_type_id, count, supplier_id, status, requester_id, reason) " +

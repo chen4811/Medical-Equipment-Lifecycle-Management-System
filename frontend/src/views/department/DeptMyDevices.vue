@@ -183,6 +183,20 @@ import axios from 'axios'
 const keyword = ref('')
 const status = ref('')
 const devices = reactive([])
+const departmentId = ref(null)
+const accountId = Number(localStorage.getItem('account_id') || 'θ')
+
+const getDepartmentId = async (accountId) => {
+  try {
+    const response = await axios.get(`/req/department/id`, {
+      params: { accountId }
+    })
+    console.log(response.data);
+    departmentId.value = response.data
+  } catch (error) {
+    console.error('Error fetching department ID:', error)
+  }
+}
 
 // 设备筛选和状态
 const filteredDevices = computed(() => {
@@ -194,8 +208,12 @@ const filteredDevices = computed(() => {
   })
 })
 
-onMounted(() => {
-  fetchDevices()
+onMounted(async () => {
+  // 获取 departmentId
+  if (accountId !== 'θ') {
+    await getDepartmentId(accountId)
+  }
+  await fetchDevices()
 })
 
 watch([keyword, status], () => {
@@ -203,16 +221,18 @@ watch([keyword, status], () => {
 })
 
 async function fetchDevices() {
+  if (!departmentId.value) return  // Only fetch devices if departmentId is available
+
   try {
     const response = await axios.get('/req/devices', {
       params: {
         keyword: keyword.value,
         statuses: status.value ? [status.value] : [],
-        departmentIds: ['0001']  // 固定发送 departmentId 为 "0001"
+        departmentIds: [departmentId.value]  // Send departmentId dynamically
       }
     })
-    console.log('API Response:', response.data);
-    devices.splice(0, devices.length, ...response.data)
+    console.log('Devices API Response:', response.data)
+    devices.splice(0, devices.length, ...response.data)  // Update devices list
   } catch (error) {
     console.error('Error fetching devices:', error)
   }
@@ -336,11 +356,11 @@ async function fetchRepairLogs(equipmentId) {
 }
 
 // Repair Modal
-const newRepairTicket = reactive({ open: false, form: { deviceId: '',departmentId: '', type: 'Repair', description: '' } })
+const newRepairTicket = reactive({ open: false, form: { deviceId: '',departmentId: departmentId.value, type: 'Repair', description: '' } })
 function openNewRepairTicket(d) {
   newRepairTicket.open = true;
   newRepairTicket.form.deviceId = d.equipmentId
-  newRepairTicket.form.departmentId = d.departmentId
+  newRepairTicket.form.departmentId = departmentId.value
   newRepairTicket.form.type = 'Repair'
   newRepairTicket.form.description = ''
 }
@@ -354,7 +374,7 @@ async function saveRepairTicket() {
       cost: 0,
       result: '',
       status: 'Pending',
-      departmentId: newRepairTicket.form.departmentId,
+      departmentId: departmentId.value,
       requesterId: '2',
       managerId: ''
     };

@@ -19,12 +19,32 @@ const inUse = ref(0)
 const underRepair = ref(0)
 const todosUsage = ref(0)
 const todosRepair = ref(0)
+const departmentId = ref(null)
+const accountId = Number(localStorage.getItem('account_id') || 'θ')
+
+const getDepartmentId = async (accountId) => {
+  try {
+    const response = await axios.get(`/req/department/id`, {
+      params: { accountId }
+    })
+    departmentId.value = response.data
+  } catch (error) {
+    console.error('Error fetching department ID:', error)
+  }
+}
 
 // 当组件加载完成时，发起请求获取数据
 onMounted(async () => {
+  // 获取 departmentId
+  if (accountId !== 'θ') {
+    await getDepartmentId(accountId)
+  }
+
+  // 获取统计数据
   try {
-    const response = await axios.get('/req/dept/dashboard/stats')
-    console.log('API Response:', response.data); // 调试输出返回数据
+    const response = await axios.get('/req/dept/dashboard/stats', {
+      params: { departmentId: departmentId.value }
+    })
     // 更新前端数据显示
     inUse.value = response.data.inUse;
     underRepair.value = response.data.underRepair;
