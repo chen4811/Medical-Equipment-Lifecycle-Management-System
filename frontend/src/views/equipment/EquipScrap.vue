@@ -11,7 +11,6 @@
             <th>Reason</th>
             <th>Status</th>
             <th>Record</th>
-            <th>Photo</th>
             <th style="width:240px;">Actions</th>
           </tr>
         </thead>
@@ -23,10 +22,6 @@
             <td><input class="input" v-model="s.record" placeholder="Disposal record" /></td>
 
             <td>
-              <label class="btn">
-                Upload Photo
-                <input type="file" accept="image/*" @change="onUploadPhoto($event, s)" style="display:none;" />
-              </label>
               <button class="btn btn-green" style="margin-left:8px;" @click="approve(s)" v-if="s.status==='Pending'">Approve</button>
               <button class="btn btn-red" style="margin-left:8px;" @click="reject(s)" v-if="s.status==='Pending'">Reject</button>
               <button class="btn btn-blue" style="margin-left:8px;" v-if="s.status!=='Pending'" @click="view(s)">View</button>
@@ -39,7 +34,7 @@
       </table>
     </div>
   </div>
-  
+
 </template>
 
 <script setup>

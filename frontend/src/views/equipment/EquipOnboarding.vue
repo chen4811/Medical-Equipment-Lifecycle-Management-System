@@ -6,7 +6,7 @@
     <div class="cards" style="margin-top:16px; display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:12px;">
       <div v-for="o in orders" :key="o.id || o.procureId" class="card" style="padding:0; overflow:hidden;">
         <div class="image-wrap">
-          <img :src="placeholder" alt="device placeholder" />
+          <img :src="getDeviceImage(o.equipmentTypeName)" @error="DeviceImgError" alt="device" />
           <div class="status-badge">PO</div>
         </div>
         <div style="padding:12px; display:grid; gap:6px;">
@@ -27,8 +27,12 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
-import { DEFAULT_DEVICE_PLACEHOLDER as placeholder } from '@/utils/images.js'
-
+import xray from '@/assets/xray.png'
+import ecg from '@/assets/ecg.png'
+import defibrillator from '@/assets/defibrillator.png'
+import bloodAnalyzer from '@/assets/blood_analyzer.png'
+import infusionPump from '@/assets/infusion_pump.png'
+import defaultImg from '@/assets/defaultImg.png'
 const orders = ref([])
 
 async function loadOrders() {
@@ -51,6 +55,23 @@ async function onboard(o) {
     console.error('Onboarding failed', err);
     alert('Inventory entry failed.');
   }
+}
+
+const deviceImageMap = {
+  'X-Ray Machine': xray,
+  'ECG Monitor': ecg,
+  'Defibrillator': defibrillator,
+  'Blood Analyzer': bloodAnalyzer,
+  'Infusion Pump': infusionPump
+}
+
+function getDeviceImage(typeName) {
+  let defaultImg;
+  return deviceImageMap[typeName] || defaultImg
+}
+
+function DeviceImgError(event) {
+  event.target.src = defaultImg
 }
 
 onMounted(loadOrders)

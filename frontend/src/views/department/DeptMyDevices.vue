@@ -18,7 +18,7 @@
     <div class="cards" style="margin-top:16px; display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:12px;">
       <div v-for="d in filteredDevices" :key="d.equipmentId" class="device-card card" style="padding:0; overflow:hidden; cursor:pointer;" @click="openDetail(d)">
         <div class="image-wrap">
-          <img :src="getDeviceImageUrl(d.equipmentId)" @error="onDeviceImgError" alt="device" />
+          <img :src="getDeviceImage(d.equipmentTypeName)" @error="DeviceImgError" alt="device" />
           <div class="status-badge" :data-status="d.status">{{ d.status }}</div>
         </div>
         <div style="padding:12px; display:grid; gap:6px;">
@@ -186,6 +186,13 @@ const devices = reactive([])
 const departmentId = ref(null)
 const accountId = Number(localStorage.getItem('account_id') || 'θ')
 
+import xray from '@/assets/xray.png'
+import ecg from '@/assets/ecg.png'
+import defibrillator from '@/assets/defibrillator.png'
+import bloodAnalyzer from '@/assets/blood_analyzer.png'
+import infusionPump from '@/assets/infusion_pump.png'
+import defaultImg from '@/assets/defaultImg.png'
+
 const getDepartmentId = async (accountId) => {
   try {
     const response = await axios.get(`/req/department/id`, {
@@ -198,7 +205,6 @@ const getDepartmentId = async (accountId) => {
   }
 }
 
-// 设备筛选和状态
 const filteredDevices = computed(() => {
   const kw = keyword.value.toLowerCase()
   return devices.filter(d => {
@@ -219,6 +225,23 @@ onMounted(async () => {
 watch([keyword, status], () => {
   fetchDevices()
 })
+
+const deviceImageMap = {
+  'X-Ray Machine': xray,
+  'ECG Monitor': ecg,
+  'Defibrillator': defibrillator,
+  'Blood Analyzer': bloodAnalyzer,
+  'Infusion Pump': infusionPump
+}
+
+function getDeviceImage(typeName) {
+  let defaultImg;
+  return deviceImageMap[typeName] || defaultImg
+}
+
+function DeviceImgError(event) {
+  event.target.src = defaultImg
+}
 
 async function fetchDevices() {
   if (!departmentId.value) return  // Only fetch devices if departmentId is available
