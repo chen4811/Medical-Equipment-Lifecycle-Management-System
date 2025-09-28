@@ -10,11 +10,13 @@ import java.util.Map;
 @Mapper
 public interface EquipmentMapper {
 
-    @Select("SELECT e.equipment_id, e.equipment_type_id, e.status, e.user_manual_path, e.warranty_certificate_path, e.supplier_id, " +
-            "e.department_id, e.pic_url, t.equipment_type_name, d.department_name " +
+    @Select("SELECT e.equipment_id, e.equipment_type_id, e.status, e.user_manual_path, e.warranty_certificate_path, " +
+            "e.supplier_id, s.supplier_name, e.department_id, e.pic_url, " +
+            "t.equipment_type_name, d.department_name " +
             "FROM tb_equipment e " +
             "LEFT JOIN tb_equipment_type t ON e.equipment_type_id = t.equipment_type_id " +
-            "LEFT JOIN tb_department d ON e.department_id = d.department_id")
+            "LEFT JOIN tb_department d ON e.department_id = d.department_id " +
+            "LEFT JOIN tb_supplier s ON e.supplier_id = s.supplier_id")
     @Results({
             @Result(property = "equipmentId", column = "equipment_id"),
             @Result(property = "equipmentTypeId", column = "equipment_type_id"),
@@ -22,12 +24,14 @@ public interface EquipmentMapper {
             @Result(property = "userManualPath", column = "user_manual_path"),
             @Result(property = "warrantyCertificatePath", column = "warranty_certificate_path"),
             @Result(property = "supplierId", column = "supplier_id"),
+            @Result(property = "supplierName", column = "supplier_name"),
             @Result(property = "departmentId", column = "department_id"),
             @Result(property = "picUrl", column = "pic_url"),
             @Result(property = "equipmentTypeName", column = "equipment_type_name"),
             @Result(property = "departmentName", column = "department_name")
     })
     List<Equipment> findAll();
+
 
     @Select("SELECT e.*, t.equipment_type_name, d.department_name " +
             "FROM tb_equipment e " +

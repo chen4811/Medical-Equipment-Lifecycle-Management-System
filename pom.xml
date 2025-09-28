@@ -61,11 +61,6 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>ojectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <version>1.18.36</version>
-        </dependency>
-        <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
         </dependency>

@@ -4,23 +4,31 @@
     <div class="subtitle" style="margin-top:8px;">Manage equipment inventory (backed by server).</div>
 
     <!-- Filters -->
-    <div class="ui-toolbar" style="margin-top:16px;">
-      <input class="input" v-model="filters.keyword" placeholder="Search by id/type/vendor" />
-      <div>
+    <div class="ui-toolbar" style="margin-top:16px; display:flex; flex-wrap:wrap; gap:12px;">
+      <input class="input" v-model="filters.keyword" placeholder="Search by id/type/vendor" style="min-width:200px;" />
+      <div style="min-width:200px;">
         <label>Type</label>
         <MultiSelect v-model="filters.types" :options="types.map(t => ({ value: t, label: t }))" placeholder="All types" />
       </div>
-      <div>
+      <div style="min-width:200px;">
         <label>Status</label>
         <MultiSelect v-model="filters.statuses" :options="statuses.map(s => ({ value: s, label: s }))" placeholder="All status" />
       </div>
-      <div>
+      <div style="min-width:240px;">
         <label>Department</label>
-        <MultiSelect v-model="filters.departmentIds" :options="departments.map(d => ({ value: String(d.departmentId), label: d.departmentName }))" placeholder="All departments" />
+        <MultiSelect
+            v-model="filters.departmentIds"
+            :options="departments.map(d => ({ value: d.departmentId, label: d.departmentName }))"
+            placeholder="All departments"
+        />
       </div>
-      <div>
+      <div style="min-width:240px;">
         <label>Vendor</label>
-        <MultiSelect v-model="filters.vendors" :options="vendorsList.map(v => ({ value: v, label: v }))" placeholder="All vendors" />
+        <MultiSelect
+            v-model="filters.vendors"
+            :options="vendorsList"
+            placeholder="All vendors" />
+
       </div>
       <div style="display:flex; gap:8px; align-items:end;">
         <button class="btn" @click="resetFilters">Reset</button>
@@ -28,8 +36,9 @@
       </div>
     </div>
 
+
     <!-- Device cards -->
-    <div class="cards" style="margin-top:16px; display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:12px;">
+    <div class="cards" style="margin-top:16px; display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:12px;">
       <div v-for="d in filtered" :key="d.equipmentId" class="device-card card" @click="openDetail(d)" style="cursor:pointer; padding:0; overflow:hidden;">
         <div class="image-wrap">
           <img :src="getDeviceImageUrl(d.equipmentId)" @error="onDeviceImgError" alt="device" />
@@ -38,9 +47,9 @@
         <div style="padding:12px; display:grid; gap:6px;">
           <div class="title-md">{{ d.equipmentTypeName || d.equipmentTypeId }}</div>
           <div class="subtitle">ID: {{ d.equipmentId }}</div>
-          <div class="subtitle">Status: {{ d.status }}</div>
+          <div class="muted">Status: {{ d.status }}</div>
           <div class="muted">{{ shortDesc(d.description || '') }}</div>
-          <div class="muted">Vendor: {{ d.supplierId || '-' }}</div>
+          <div class="muted">Vendor: {{ d.supplierName || '-' }}</div>
           <div class="muted">Dept: {{ departmentName(d.departmentId) || '-' }}</div>
           <div style="display:flex; gap:8px; margin-top:8px;">
             <button class="btn" @click.stop="upload('Manual', d)">Upload Manual</button>
@@ -48,7 +57,7 @@
             <button class="btn" @click.stop="deleteEquipmentPrompt(d)">Delete</button>
 
             <button
-                v-if="d.status === 'assigning'"
+                v-if="d.status === 'Unassigned'"
                 class="btn"
                 @click.stop="openAssignDialog(d)">
               Assign department
@@ -76,11 +85,11 @@
               <div><b>Vendor:</b> {{ detail.device.supplierId }}</div>
               <div><b>Description:</b> {{ detail.device.description || 'No description' }}</div>
               <div><b>Manual:</b>
-                <a v-if="d.userManualPath" :href="d.userManualPath" target="_blank">open</a>
+                <a v-if="detail.device.userManualPath" :href="`http://localhost:8080${detail.device.userManualPath}`" target="_blank">open</a>
                 <span v-else>-</span>
               </div>
               <div><b>Warranty:</b>
-                <a v-if="d.warrantyCertificatePath" :href="d.warrantyCertificatePath" target="_blank">open</a>
+                <a v-if="detail.device.warrantyCertificatePath" :href="`http://localhost:8080${detail.device.warrantyCertificatePath}`" target="_blank">open</a>
                 <span v-else>-</span>
               </div>
             </div>
@@ -155,9 +164,6 @@ onMounted(() => {
 const types = computed(() => {
   return Array.from(new Set(state.devices.map(d => d.equipmentTypeName || d.equipmentTypeId).filter(Boolean)))
 })
-const vendorsList = computed(() => {
-  return Array.from(new Set(state.devices.map(d => d.supplierId).filter(Boolean)))
-})
 
 // filtering
 const filtered = computed(() => {
@@ -166,10 +172,21 @@ const filtered = computed(() => {
     const matchKw = !kw || `${d.equipmentId || ''} ${d.equipmentTypeName || d.equipmentTypeId || ''} ${d.supplierId || ''}`.toLowerCase().includes(kw)
     const matchType = !filters.types.length || filters.types.includes(d.equipmentTypeName || d.equipmentTypeId)
     const matchStatus = !filters.statuses.length || filters.statuses.includes(d.status)
-    const matchDept = !filters.departmentIds.length || filters.departmentIds.includes(String(d.departmentId))
+    const matchDept = !filters.departmentIds.length || filters.departmentIds.includes(d.departmentId)
     const matchVendor = !filters.vendors.length || filters.vendors.includes(d.supplierId)
     return matchKw && matchType && matchStatus && matchDept && matchVendor
   })
+})
+
+// vue script setup
+const vendorsList = computed(() => {
+  const seen = new Map()
+  state.devices.forEach(d => {
+    if (d.supplierId && d.supplierName) {
+      seen.set(d.supplierId, d.supplierName)
+    }
+  })
+  return Array.from(seen, ([id, name]) => ({ value: id, label: name }))
 })
 
 function resetFilters() {
@@ -273,10 +290,13 @@ async function confirmAssign() {
     alert("Please select a department")
     return
   }
+
   try {
-    await axios.post(`/req/devices/${encodeURIComponent(selectedDevice.value.equipmentId)}/assign`, null, {
-      params: { departmentId: selectedDept.value }
-    })
+    await axios.post(
+        `/req/devices/${encodeURIComponent(selectedDevice.value.equipmentId)}/assign`,
+        { departmentId: selectedDept.value },
+        { headers: { 'Content-Type': 'application/json' } }
+    )
     assignDialogVisible.value = false
     await loadData()
   } catch (err) {
@@ -284,6 +304,7 @@ async function confirmAssign() {
     alert("Assign failed")
   }
 }
+
 
 </script>
 

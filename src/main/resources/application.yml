@@ -1,5 +1,5 @@
 upload:
-  base-dir: ./uploads
+  base-dir: C:\Users\34556\Desktop\MELMS\uploads
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -26,4 +26,7 @@ spring:
         transport:
           protocol: smtp
     default-encoding: UTF-8
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
 

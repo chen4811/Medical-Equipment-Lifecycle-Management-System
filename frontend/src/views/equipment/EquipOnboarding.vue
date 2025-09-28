@@ -4,51 +4,52 @@
     <div class="subtitle" style="margin-top:8px;">Receiving arrived purchase orders for onboarding.</div>
 
     <div class="cards" style="margin-top:16px; display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:12px;">
-      <div v-for="o in orders" :key="o.id" class="card" style="padding:0; overflow:hidden;">
+      <div v-for="o in orders" :key="o.id || o.procureId" class="card" style="padding:0; overflow:hidden;">
         <div class="image-wrap">
           <img :src="placeholder" alt="device placeholder" />
           <div class="status-badge">PO</div>
         </div>
         <div style="padding:12px; display:grid; gap:6px;">
-          <div class="title-md">{{ o.type }}</div>
-          <div class="subtitle">Order: {{ o.id }}</div>
-          <div class="muted">Quantity: {{ o.count }}</div>
-          <div class="muted">Supplier: {{ o.supplierId }}</div>
+          <div class="title-md">{{ o.equipmentTypeName }}</div>
+          <div class="subtitle">OrderID: {{ o.id ?? o.procureId }}</div>
+          <div class="muted">Quantity: {{ o.count ?? 0 }}</div>
+          <div class="muted">Supplier: {{ o.supplierName }}</div>
           <div style="display:flex; gap:8px; margin-top:8px;">
-            <button class="btn btn-green" @click="onboard(o)">入库</button>
+            <button class="btn btn-green" @click="onboard(o)">Onboard</button>
           </div>
         </div>
       </div>
-      <div v-if="orders.length===0" class="subtitle" style="padding:16px;">No arrived orders</div>
+      <div v-if="orders.length === 0" class="subtitle" style="padding:16px;">No arrived orders</div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { reactive, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import { DEFAULT_DEVICE_PLACEHOLDER as placeholder } from '@/utils/images.js'
 
-const state = reactive({ orders: [] })
-const orders = state.orders
+const orders = ref([])
 
 async function loadOrders() {
   try {
-    const res = await axios.get('/req//arrived-orders')
-    state.orders = res.data
+    const res = await axios.get('/req/arrived-orders')
+    orders.value = Array.isArray(res.data) ? res.data : res.data.orders ?? []
+    console.log('Loaded orders:', orders.value)
   } catch (err) {
     console.error('Failed to load purchase orders', err)
+    orders.value = []
   }
 }
 
 async function onboard(o) {
   try {
-    await axios.post(`/req/onboard`, { procureId: o.procure_id })
-    alert(`Order ${o.procure_id} The goods have been successfully warehoused.`)
-    await loadOrders()
+    await axios.post(`/req/onboard/${o.procureId}`);
+    alert(`Order ${o.procure_id} The goods have been successfully warehoused.`);
+    await loadOrders();
   } catch (err) {
-    console.error('Onboarding failed', err)
-    alert('Inventory entry failed.')
+    console.error('Onboarding failed', err);
+    alert('Inventory entry failed.');
   }
 }
 

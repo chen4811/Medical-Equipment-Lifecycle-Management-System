@@ -1,6 +1,7 @@
 package com.example.melms.controller;
 
 import com.example.melms.pojo.DashboardVO;
+import com.example.melms.pojo.Department;
 import com.example.melms.pojo.Equipment;
 import com.example.melms.pojo.ProcureOrder;
 import com.example.melms.service.DepartmentService;
@@ -162,8 +163,11 @@ public class EquipmentController {
     }
 
     @GetMapping("/departments")
-    public List<?> getDepartments() {
-        return departmentService.listAll();
+    public List<Department> getDepartments() {
+        System.out.println("1");
+        List<Department> e =  departmentService.listAll();
+        System.out.println(e);
+        return e;
     }
 
     @GetMapping("/pending")
@@ -192,10 +196,10 @@ public class EquipmentController {
         return procurementService.getArrivedOrders();
     }
     @PostMapping("/onboard/{procureId}")
-    public String onboard(@PathVariable Integer procureId) {
+    public String onboard(@PathVariable int procureId) {
         List<ProcureOrder> orders = procurementService.getArrivedOrders();
         for (ProcureOrder order : orders) {
-            if (order.getProcureId().equals(procureId)) {
+            if (order.getProcureId() == procureId) {
                 equipmentService.onboardEquipment(order);
                 return "The warehousing has been completed";
             }
@@ -238,19 +242,19 @@ public class EquipmentController {
                 return ResponseEntity.badRequest().body(Map.of("error", "Unknown kind"));
             }
 
-            // 确保目录存在
+
             Path uploadPath = Paths.get(baseDir, dir);
             if (!Files.exists(uploadPath)) {
                 Files.createDirectories(uploadPath);
             }
 
-            // 保存文件，防止覆盖
+
             String originalFilename = file.getOriginalFilename();
             String filename = System.currentTimeMillis() + "_" + originalFilename;
             Path filePath = uploadPath.resolve(filename);
             file.transferTo(filePath.toFile());
 
-            // 构造前端访问 URL
+
             String fileUrl = "/" + dir + "/" + filename;
 
             equipmentService.saveFile(equipmentId, kind, fileUrl);

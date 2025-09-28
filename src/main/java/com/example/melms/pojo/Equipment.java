@@ -3,16 +3,17 @@ import lombok.Data;
 @Data
 public class Equipment {
     private int equipmentId;
-    private String equipmentTypeId;          // 设备类型ID
-    private String status;                   // 状态 (assigning, using, repairing, scrapping)
-    private String userManualPath;           // 用户手册路径
-    private String warrantyCertificatePath;  // 保修凭证路径
-    private String supplierId;               // 供应商ID
-    private String departmentId;             // 部门ID
-    private String picUrl;                   // 图片URL
+    private String equipmentTypeId;
+    private String status;
+    private String userManualPath;
+    private String warrantyCertificatePath;
+    private String supplierId;
+    private String supplierName;
+    private int departmentId;
+    private String picUrl;
 
-    private String equipmentTypeName;        // 设备类型名称
-    private String departmentName;           // 部门名称
+    private String equipmentTypeName;
+    private String departmentName;
 }
 
 
