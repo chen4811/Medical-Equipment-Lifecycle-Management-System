@@ -35,7 +35,18 @@ public interface DepartmentMapper {
             @Result(property = "remark", column = "remark"),
             @Result(property = "time", column = "time")
     })
-    List<UsageLog> findByTargetEquipmentId(@Param("recorderId") String recorderId);
+    List<UsageLog> findByRecorderId(@Param("recorderId") String recorderId);
+
+    @Select("SELECT log_id, recorder_id, target_equipment_id, remark, time " +
+            "FROM tb_usage_logging WHERE target_equipment_id = #{equipmentId}")
+    @Results({
+            @Result(property = "logId", column = "log_id"),
+            @Result(property = "recorderId", column = "recorder_id"),
+            @Result(property = "targetEquipmentId", column = "target_equipment_id"),
+            @Result(property = "remark", column = "remark"),
+            @Result(property = "time", column = "time")
+    })
+    List<UsageLog> findByTargetEquipmentId(@Param("equipmentId") String equipmentId);
 
     @Insert("INSERT INTO tb_usage_logging (recorder_id, target_equipment_id, remark, time) " +
             "VALUES (#{recorderId}, #{targetEquipmentId}, #{remark}, CURRENT_TIMESTAMP)")

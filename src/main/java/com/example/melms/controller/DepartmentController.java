@@ -33,7 +33,12 @@ public class DepartmentController {
 
     @GetMapping("/dept/usage/logs")
     public List<UsageLog> getUsageLogs(@RequestParam("recorderId") String recorderId) {
-        return departmentService.getUsageLogsByEquipmentId(recorderId);
+        return departmentService.getUsageLogsByRecorderId(recorderId);
+    }
+
+    @GetMapping("/dept/usage/logs/equip")
+    public List<UsageLog> getUsageLogsEquip(@RequestParam("equipmentId") String equipmentId) {
+        return departmentService.getUsageLogsByEquipmentId(equipmentId);
     }
 
     @PostMapping("/dept/usage/logs")

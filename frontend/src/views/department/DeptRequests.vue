@@ -61,15 +61,11 @@
         <div class="ui-form-grid">
           <div>
             <label>Equipment Type</label>
-            <input class="input" v-model="modal.form.equipmentTypeId" placeholder="e.g. Laptop, Monitor" />
+            <input class="input" v-model="modal.form.equipmentTypeId" placeholder="e.g. T001, T002" />
           </div>
           <div>
             <label>Count</label>
             <input class="input" v-model="modal.form.count" type="number" placeholder="e.g. 5" />
-          </div>
-          <div>
-            <label>Supplier</label>
-            <input class="input" v-model="modal.form.supplierId" placeholder="e.g. ABC Supplier" />
           </div>
           <div style="grid-column: 1 / -1;">
             <label>Reason</label>
@@ -134,14 +130,13 @@ const modal = reactive({
   form: {
     equipmentTypeId: '',
     count: '',
-    supplierId: '',
     reason: ''
   }
 });
 
 function openCreate() {
   modal.open = true;
-  modal.form = { equipmentTypeId: '', count: '', supplierId: '', reason: '' };
+  modal.form = { equipmentTypeId: '', count: '', reason: '' };
 }
 
 function closeCreate() {
@@ -154,7 +149,7 @@ async function save() {
     const procureRequestData = {
       equipmentTypeId: modal.form.equipmentTypeId,
       count: modal.form.count,
-      supplierId: modal.form.supplierId,
+      supplierId: '',
       status: 'under-review',
       reason: modal.form.reason,
       requesterId: accountId,  // Update with actual requester ID
