@@ -28,19 +28,21 @@
             <th>Name</th>
             <th>User Role</th>
             <th>Department</th>
+            <th>Email</th>
             <th style="width:140px;">Actions</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-if="loading"><td colspan="5"><TableSkeleton :rows="6" /></td></tr>
+          <tr v-if="loading"><td colspan="6"><TableSkeleton :rows="6" /></td></tr>
           <tr v-else-if="pagedUsers.length === 0">
-            <td colspan="5"><EmptyState title="No users" hint="Try adjusting filters or add a new user." /></td>
+            <td colspan="6"><EmptyState title="No users" hint="Try adjusting filters or add a new user." /></td>
           </tr>
           <tr v-else v-for="u in pagedUsers" :key="u.id">
             <td>{{ u.id }}</td>
             <td>{{ u.username }}</td>
             <td>{{ roleName(u.roleId) }}</td>
             <td>{{ departmentName(u.departmentId) }}</td>
+            <td>{{ u.email || '-' }}</td>
             <td style="white-space:nowrap;">
               <button class="btn btn-blue" @click="openEdit(u)">Edit</button>
               <button class="btn btn-red" style="margin-left:8px;" @click="remove(u)">Delete</button>
@@ -76,6 +78,10 @@
           <div>
             <label>Name</label>
             <input class="input" v-model="modal.form.username" placeholder="Enter name" />
+          </div>
+          <div>
+            <label>Email</label>
+            <input class="input" v-model="modal.form.email" placeholder="you@example.com" />
           </div>
           <div>
             <label>User Role</label>
@@ -211,7 +217,7 @@ function departmentName(deptId) {
 const modal = reactive({
   open: false,
   mode: 'create', // 'create' | 'edit'
-  form: { id: '', username: '', roleId: roles[0]?.id || '', departmentId: '', password: '' },
+  form: { id: '', username: '', roleId: roles[0]?.id || '', departmentId: '', password: '', email: '' },
 })
 const showPassword = ref(false)
 
@@ -220,14 +226,14 @@ function nextUserId() { return '' }
 function openCreate() {
   modal.open = true
   modal.mode = 'create'
-  modal.form = { id: '', username: '', roleId: roles[0]?.id || '', departmentId: departments.value[0]?.id || '', password: '' }
+  modal.form = { id: '', username: '', roleId: roles[0]?.id || '', departmentId: departments.value[0]?.id || '', password: '', email: '' }
   showPassword.value = false
 }
 
 function openEdit(user) {
   modal.open = true
   modal.mode = 'edit'
-  modal.form = { id: user.id, username: user.username, roleId: user.roleId, departmentId: user.departmentId, password: '' }
+  modal.form = { id: user.id, username: user.username, roleId: user.roleId, departmentId: user.departmentId, password: '', email: user.email || '' }
   showPassword.value = false
 }
 
@@ -265,6 +271,7 @@ async function refresh() {
       username: u.username,
       roleId: normalizeRole(u.roleId),
       departmentId: u.departmentId,
+      email: u.email || ''
     }))
   }
   loading.value = false
@@ -275,11 +282,11 @@ async function save() {
   if (!p.username || !p.username.trim()) { return showDialog('Name is required') }
   if (modal.mode === 'create' && (!p.password || !p.password.trim())) { return showDialog('Password is required') }
   if (modal.mode === 'create') {
-    const resp = await fetch('/req/admin/user', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: p.username, password: p.password || '', role: denormalizeRole(p.roleId), department_id: p.departmentId }) })
+    const resp = await fetch('/req/admin/user', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: p.username, password: p.password || '', role: denormalizeRole(p.roleId), department_id: p.departmentId, email: p.email || '' }) })
     const json = await resp.json().catch(() => ({ code: 'ERR' }))
     if (json.code !== '000') { return showDialog(json.message || 'Failed to add user') }
   } else {
-    const resp = await fetch('/req/admin/user', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ account_id: String(p.id), name: p.username, password: p.password || '', role: denormalizeRole(p.roleId), department_id: p.departmentId }) })
+    const resp = await fetch('/req/admin/user', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ account_id: String(p.id), name: p.username, password: p.password || '', role: denormalizeRole(p.roleId), department_id: p.departmentId, email: p.email || '' }) })
     const json = await resp.json().catch(() => ({ code: 'ERR' }))
     if (json.code !== '000') { return showDialog(json.message || 'Failed to update user') }
   }

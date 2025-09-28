@@ -4,7 +4,7 @@
     <div class="subtitle" style="margin-top:8px;">Create and track repair/maintenance/parts replacement tickets.</div>
 
     <!-- Filters -->
-    <div class="filters" style="margin-top:16px; display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px;">
+    <div class="ui-toolbar" style="margin-top:16px;">
       <input class="input" v-model="filters.keyword" placeholder="Search by id/device/desc" />
       <select class="input" v-model="filters.type">
         <option value="">All types</option>
@@ -28,7 +28,7 @@
 
     <!-- Table -->
     <div class="table-wrapper" style="margin-top:16px; overflow:auto;">
-      <table class="table">
+      <table class="ui-table" style="table-layout:auto; width:100%;">
         <thead>
         <tr>
           <th>ID</th>
@@ -61,10 +61,10 @@
     </div>
 
     <!-- Create Modal -->
-    <div v-if="modal.open" class="modal-backdrop">
-      <div class="modal card">
+    <div v-if="modal.open" class="ui-modal-backdrop">
+      <div class="ui-modal card">
         <div class="title-lg">New Repair Ticket</div>
-        <div class="form-grid">
+        <div class="ui-form-grid">
           <div>
             <label>Device ID</label>
             <input class="input" v-model="modal.form.deviceId" placeholder="e.g. EQ-0001" />
@@ -166,12 +166,12 @@ async function save() {
       managerId: ''
     };
     await axios.post('/req/dept/repair/logs', repairTicketData);
-    alert("Repair ticket submitted successfully!");
+    showDialog('Repair ticket submitted successfully!')
     closeCreate();
     fetchRepairTickets(modal.form.departmentId); // Fetch updated tickets
   } catch (error) {
     console.error(error);
-    alert("Failed to submit repair ticket.");
+    showDialog('Failed to submit repair ticket.')
   }
 }
 
@@ -181,9 +181,7 @@ function accept(t) {
 }
 
 // View ticket details (demo placeholder)
-function view(t) {
-  alert(`View ${t.id} (demo only)`);
-}
+function view(t) { showDialog(`View ${t.id} (demo only)`) }
 
 // Format date to local string
 function fmt(ts) {
@@ -199,42 +197,30 @@ onMounted(() => {
   const departmentId = '0001';
   fetchRepairTickets(departmentId);
 });
+function showDialog(message) {
+  let overlay = document.createElement('div')
+  overlay.style.position = 'fixed'
+  overlay.style.inset = '0'
+  overlay.style.background = 'rgba(0,0,0,0.35)'
+  overlay.style.display = 'flex'
+  overlay.style.alignItems = 'center'
+  overlay.style.justifyContent = 'center'
+  overlay.style.zIndex = '9999'
+  const box = document.createElement('div')
+  box.className = 'card'
+  box.style.padding = '16px'
+  box.style.maxWidth = '420px'
+  box.style.minWidth = '280px'
+  box.innerHTML = `<div style="font-weight:700;">Notice</div><div style="margin-top:8px;">${message}</div><div style="margin-top:12px; display:flex; justify-content:flex-end;"><button id="ok" class="btn btn-primary">OK</button></div>`
+  overlay.appendChild(box)
+  document.body.appendChild(overlay)
+  overlay.querySelector('#ok').addEventListener('click', () => { document.body.removeChild(overlay) })
+}
+
 </script>
 
 <style scoped>
-.table {
-  width: 100%;
-  border-collapse: collapse;
-}
-.table th, .table td {
-  padding: 10px 12px;
-  border-bottom: 1px solid #e5e7eb;
-  text-align: left;
-  white-space: nowrap;
-}
-.table th {
-  background: #f9fafb;
-  font-weight: 700;
-}
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-}
-.modal {
-  width: min(720px, 100%);
-  padding: 16px;
-}
-.form-grid {
-  margin-top: 16px;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
-}
+.ui-form-grid textarea.input { height: 120px; resize: vertical; }
 textarea.input {
   height: 120px;
   resize: vertical;

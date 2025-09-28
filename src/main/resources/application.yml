@@ -10,3 +10,20 @@ spring:
     resources:
       static-locations: file:uploads/
 
+  mail:
+    host: smtp.163.com
+    port: 465
+    username: rf_diicsu_rb@163.com
+    password: VAY5wcSNdMhDkZQv
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+            trust: smtp.163.com
+          from: rf_diicsu_rb@163.com
+        transport:
+          protocol: smtp
+    default-encoding: UTF-8
+

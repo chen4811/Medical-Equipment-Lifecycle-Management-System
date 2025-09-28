@@ -4,7 +4,7 @@
     <div class="subtitle" style="margin-top:8px;">Manage scrap applications and records (mock data).</div>
 
     <div class="table-wrapper" style="margin-top:16px; overflow:auto;">
-      <table class="table" style="table-layout:fixed; width:100%;">
+      <table class="ui-table" style="table-layout:auto; width:100%;">
         <thead>
           <tr>
             <th>Scrap ID</th>

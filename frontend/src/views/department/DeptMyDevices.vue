@@ -3,13 +3,16 @@
     <div class="title-lg">My Department Devices</div>
     <div class="subtitle" style="margin-top:8px;">Readonly device list and details for this department.</div>
 
-    <div class="filters" style="margin-top:16px; display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px;">
+    <div class="ui-toolbar" style="margin-top:16px;">
       <input class="input" v-model="keyword" placeholder="Search by id/type/vendor" />
-      <select class="input" v-model="status">
-        <option value="">All status</option>
-        <option value="In Use">In Use</option>
-        <option value="Under Repair">Under Repair</option>
-      </select>
+      <div>
+        <label>Status</label>
+        <select class="input" v-model="status">
+          <option value="">All status</option>
+          <option value="In Use">In Use</option>
+          <option value="Under Repair">Under Repair</option>
+        </select>
+      </div>
     </div>
 
     <div class="cards" style="margin-top:16px; display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:12px;">
@@ -35,8 +38,8 @@
     </div>
 
     <!-- Usage Logs Modal -->
-    <div v-if="usage.open" class="modal-backdrop">
-      <div class="modal card">
+    <div v-if="usage.open" class="ui-modal-backdrop">
+      <div class="ui-modal card">
         <div class="title-lg">Usage Logs - {{ usage.device.equipmentId }}</div>
         <div class="subtitle">Records for this device</div>
 
@@ -58,9 +61,37 @@
       </div>
     </div>
 
+    <!-- Add Usage Modal -->
+    <div v-if="add.open" class="ui-modal-backdrop">
+      <div class="ui-modal card">
+        <div class="title-lg">Add Usage</div>
+        <div class="ui-form-grid">
+          <div style="grid-column:1/-1; color: var(--color-muted);">
+            Device: {{ add.device.equipmentId }}
+          </div>
+          <div>
+            <label>Purpose</label>
+            <input class="input" v-model="add.form.purpose" placeholder="e.g. surgery support" />
+          </div>
+          <div>
+            <label>Exception</label>
+            <input class="input" v-model="add.form.exception" placeholder="optional" />
+          </div>
+          <div style="grid-column: 1 / -1;">
+            <label>Remark</label>
+            <input class="input" v-model="add.form.remark" placeholder="note ..." />
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:16px;">
+          <button class="btn" @click="closeAdd">Cancel</button>
+          <button class="btn btn-primary" @click="saveUsage">Submit</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Repair Log Modal -->
-    <div v-if="repairLog.open" class="modal-backdrop">
-      <div class="modal card">
+    <div v-if="repairLog.open" class="ui-modal-backdrop">
+      <div class="ui-modal card">
         <div class="title-lg">Repair Logs - {{ repairLog.device.equipmentId }}</div>
         <div class="subtitle">Repair records for this device</div>
 
@@ -88,10 +119,10 @@
     </div>
 
     <!-- New Repair Ticket Modal -->
-    <div v-if="newRepairTicket.open" class="modal-backdrop">
-      <div class="modal card">
+    <div v-if="newRepairTicket.open" class="ui-modal-backdrop">
+      <div class="ui-modal card">
         <div class="title-lg">New Repair Ticket</div>
-        <div class="form-grid">
+        <div class="ui-form-grid">
           <div>
             <label>Device ID</label>
             <input class="input" v-model="newRepairTicket.form.deviceId" placeholder="e.g. EQ-0001" />
@@ -246,8 +277,10 @@ async function saveUsage() {
   add.saving = true
   add.error = ''
   try {
+    const recorderId = localStorage.getItem('account_id') || ''
+    if (!recorderId) { add.error = 'Not logged in'; add.saving=false; return }
     await axios.post('/req/dept/usage/logs', {
-      recorderId: '2',
+      recorderId: String(recorderId),
       targetEquipmentId: add.device.equipmentId,
       remark: tempRemark,
     })

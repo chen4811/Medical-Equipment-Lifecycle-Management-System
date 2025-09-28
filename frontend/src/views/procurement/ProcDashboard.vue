@@ -1,5 +1,5 @@
 <template>
-    <div>
+    <div class="card" style="padding:16px;">
         <div class="grid">
             <StatCard label="Open Requisitions" :value="openReqs"/>
             <StatCard label="Pending Receiving" :value="pendingReceiving"/>

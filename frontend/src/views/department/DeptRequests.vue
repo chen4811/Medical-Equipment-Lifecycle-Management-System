@@ -4,7 +4,7 @@
     <div class="subtitle" style="margin-top:8px;">Request new devices or accessories for the department.</div>
 
     <!-- Filters & Create -->
-    <div class="filters" style="margin-top:16px; display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px;">
+    <div class="ui-toolbar" style="margin-top:16px;">
       <input class="input" v-model="filters.keyword" placeholder="Search by ID/content" />
       <select class="input" v-model="filters.status">
         <option value="">All Status</option>
@@ -22,7 +22,7 @@
 
     <!-- Table -->
     <div class="table-wrapper" style="margin-top:16px; overflow:auto;">
-      <table class="table" style="table-layout:fixed; width:100%;">
+      <table class="ui-table" style="table-layout:auto; width:100%;">
         <thead>
         <tr>
           <th>ID</th>
@@ -55,10 +55,10 @@
     </div>
 
     <!-- Create Modal -->
-    <div v-if="modal.open" class="modal-backdrop">
-      <div class="modal card">
+    <div v-if="modal.open" class="ui-modal-backdrop">
+      <div class="ui-modal card">
         <div class="title-lg">New Equipment Request</div>
-        <div class="form-grid">
+        <div class="ui-form-grid">
           <div>
             <label>Equipment Type</label>
             <input class="input" v-model="modal.form.equipmentTypeId" placeholder="e.g. Laptop, Monitor" />
@@ -146,12 +146,12 @@ async function save() {
     };
 
     const response = await axios.post('/req/dept/procure/logs', procureRequestData);
-    alert("Request submitted successfully!");
+    showDialog('Request submitted successfully!')
     closeCreate();
     fetchProcureRequests();  // Refresh the list after submission
   } catch (error) {
     console.error(error);
-    alert("Failed to submit request.");
+    showDialog('Failed to submit request.')
   }
 }
 
@@ -167,17 +167,15 @@ async function cancel(r) {
     });
 
     // 如果更新成功
-    alert('Request canceled successfully!');
+    showDialog('Request canceled successfully!')
   } catch (error) {
     console.error(error);
-    alert('Failed to cancel the request.');
+    showDialog('Failed to cancel the request.')
   }
 }
 
 // View the request details (demo placeholder)
-function view(r) {
-  alert(`View ${r.procureId} (demo only)`);
-}
+function view(r) { showDialog(`View ${r.procureId} (demo only)`) }
 
 // Fetch procurement requests for the department
 async function fetchProcureRequests() {
@@ -203,6 +201,26 @@ function fmt(ts) {
 onMounted(() => {
   fetchProcureRequests(); // Fetch data for the current department
 });
+function showDialog(message) {
+  let overlay = document.createElement('div')
+  overlay.style.position = 'fixed'
+  overlay.style.inset = '0'
+  overlay.style.background = 'rgba(0,0,0,0.35)'
+  overlay.style.display = 'flex'
+  overlay.style.alignItems = 'center'
+  overlay.style.justifyContent = 'center'
+  overlay.style.zIndex = '9999'
+  const box = document.createElement('div')
+  box.className = 'card'
+  box.style.padding = '16px'
+  box.style.maxWidth = '420px'
+  box.style.minWidth = '280px'
+  box.innerHTML = `<div style=\"font-weight:700;\">Notice</div><div style=\"margin-top:8px;\">${message}</div><div style=\"margin-top:12px; display:flex; justify-content:flex-end;\"><button id=\"ok\" class=\"btn btn-primary\">OK</button></div>`
+  overlay.appendChild(box)
+  document.body.appendChild(overlay)
+  overlay.querySelector('#ok').addEventListener('click', () => { document.body.removeChild(overlay) })
+}
+
 </script>
 
 <style scoped>

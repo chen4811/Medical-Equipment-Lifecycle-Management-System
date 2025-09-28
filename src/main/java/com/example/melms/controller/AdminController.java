@@ -80,10 +80,11 @@ public class AdminController {
             String password = payload.get("password");
             String role = payload.get("role");
             String departmentId = payload.get("department_id");
+            String email = payload.getOrDefault("email", "");
             if (name == null || name.trim().isEmpty()) return Result.fail("400","Name is required", null);
             if (password == null || password.trim().isEmpty()) return Result.fail("400","Password is required", null);
             if (adminMapper.countByName(name) > 0) return Result.fail("409","Name already exists", null);
-            adminMapper.addNewUser(name, password, role, departmentId);
+            adminMapper.addNewUser(name, password, role, departmentId, email);
             return Result.success("ok", null);
         } catch (Exception e) {
             return Result.fail("500", e.getMessage(), null);
@@ -99,12 +100,13 @@ public class AdminController {
             String password = payload.get("password");
             String role = payload.get("role");
             String departmentId = payload.get("department_id");
+            String email = payload.getOrDefault("email", "");
             if (name == null || name.trim().isEmpty()) return Result.fail("400","Name is required", null);
             if (adminMapper.countByNameExcludingId(name, accountId) > 0) return Result.fail("409","Name already exists", null);
             if (password == null || password.trim().isEmpty()) {
-                adminMapper.updateUserMeta(accountId, name, departmentId, role);
+                adminMapper.updateUserMeta(accountId, name, departmentId, role, email);
             } else {
-                adminMapper.updateUser(accountId, name, password, role, departmentId);
+                adminMapper.updateUser(accountId, name, password, role, departmentId, email);
             }
             return Result.success("ok", null);
         } catch (Exception e) {
@@ -129,6 +131,11 @@ public class AdminController {
         try {
             int accountId = Integer.parseInt(payload.getOrDefault("accountId", "0"));
             String newPwd = payload.get("newPwd");
+            String currentPwd = payload.get("currentPwd");
+            if (currentPwd != null && !currentPwd.isBlank()) {
+                int ok = adminMapper.countByIdAndPassword(accountId, currentPwd);
+                if (ok == 0) return Result.fail("401","Current password incorrect", null);
+            }
             adminMapper.resetPassword(accountId, newPwd);
             return Result.success("ok", null);
         } catch (Exception e) {

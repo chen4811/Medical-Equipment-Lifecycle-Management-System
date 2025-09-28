@@ -4,7 +4,7 @@
     <div class="subtitle" style="margin-top:8px;">Manage equipment inventory (backed by server).</div>
 
     <!-- Filters -->
-    <div class="filters" style="margin-top:16px; display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:12px;">
+    <div class="ui-toolbar" style="margin-top:16px;">
       <input class="input" v-model="filters.keyword" placeholder="Search by id/type/vendor" />
       <div>
         <label>Type</label>
@@ -93,19 +93,19 @@
     </div>
 
     <!-- Assign department dialog -->
-    <div v-if="assignDialogVisible" class="dialog-backdrop">
-      <div class="dialog">
-        <h3>Assign department</h3>
-        <p>Please select the department to allocate: </p>
+    <div v-if="assignDialogVisible" class="ui-modal-backdrop">
+      <div class="ui-modal card" style="padding:16px;">
+        <div class="title-lg">Assign department</div>
+        <div class="subtitle">Please select the department to allocate</div>
         <select v-model="selectedDept" class="select">
           <option disabled value="">Please select</option>
           <option v-for="dept in departments" :key="dept.departmentId" :value="dept.departmentId">
             {{ dept.departmentName }}
           </option>
         </select>
-        <div class="actions">
-          <button class="btn" @click="confirmAssign">Confirm</button>
+        <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:16px;">
           <button class="btn" @click="assignDialogVisible=false">Cancel</button>
+          <button class="btn btn-primary" @click="confirmAssign">Confirm</button>
         </div>
       </div>
     </div>

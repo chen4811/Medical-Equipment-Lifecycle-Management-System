@@ -18,28 +18,31 @@ public interface AdminMapper {
     @Select("SELECT count(*) FROM tb_procure_order")
     int getProcureOrderCount();
 
-    @Insert("INSERT INTO tb_account (name, password, role, department_id) VALUES (#{name}, #{password}, #{role}, #{department_id})")
-    void addNewUser(@Param("name") String name, @Param("password") String password, @Param("role") String role, @Param("department_id") String department_id);
+    @Insert("INSERT INTO tb_account (name, password, role, department_id, email) VALUES (#{name}, #{password}, #{role}, #{department_id}, #{email})")
+    void addNewUser(@Param("name") String name, @Param("password") String password, @Param("role") String role, @Param("department_id") String department_id, @Param("email") String email);
 
     @Delete("DELETE FROM tb_account WHERE account_id = #{account_id}")
     void deleteUser(@Param("account_id") int account_id);
 
-    @Update("UPDATE tb_account SET name = #{name}, password = #{password}, role = #{role}, department_id = #{department_id} WHERE account_id = #{account_id}")
-    void updateUser(@Param("account_id") int account_id, @Param("name") String name, @Param("password") String password, @Param("role") String role, @Param("department_id") String department_id);
+    @Update("UPDATE tb_account SET name = #{name}, password = #{password}, role = #{role}, department_id = #{department_id}, email = #{email} WHERE account_id = #{account_id}")
+    void updateUser(@Param("account_id") int account_id, @Param("name") String name, @Param("password") String password, @Param("role") String role, @Param("department_id") String department_id, @Param("email") String email);
 
     @Update("UPDATE tb_account SET password = #{password} WHERE account_id = #{account_id}")
     void resetPassword(@Param("account_id") int account_id, @Param("password") String password);
 
+    @Select("SELECT COUNT(*) FROM tb_account WHERE account_id = #{account_id} AND password = #{password}")
+    int countByIdAndPassword(@Param("account_id") int account_id, @Param("password") String password);
+
     @Update("UPDATE tb_account SET role = #{role} WHERE account_id = #{account_id}")
     void setRole(@Param("account_id") int account_id, @Param("role") String role);
 
-    @Update("UPDATE tb_account SET name = #{name}, role = #{role}, department_id = #{department_id} WHERE account_id = #{account_id}")
-    void updateUserMeta(@Param("account_id") int account_id, @Param("name") String name, @Param("department_id") String department_id, @Param("role") String role);
+    @Update("UPDATE tb_account SET name = #{name}, role = #{role}, department_id = #{department_id}, email = #{email} WHERE account_id = #{account_id}")
+    void updateUserMeta(@Param("account_id") int account_id, @Param("name") String name, @Param("department_id") String department_id, @Param("role") String role, @Param("email") String email);
 
     @Select("SELECT department_id AS id, department_name AS name FROM tb_department")
     List<Map<String, Object>> getDepartments();
 
-    @Select("SELECT account_id AS id, name AS username, role AS roleId, department_id AS departmentId FROM tb_account")
+    @Select("SELECT account_id AS id, name AS username, role AS roleId, department_id AS departmentId, email AS email FROM tb_account")
     List<Map<String, Object>> listUsers();
 
     @Select("SELECT COUNT(*) FROM tb_account WHERE name = #{name}")

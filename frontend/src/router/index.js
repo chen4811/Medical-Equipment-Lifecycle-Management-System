@@ -27,6 +27,7 @@ const DeptMyDevices = () => import('@/views/department/DeptMyDevices.vue')
 const DeptUsage = () => import('@/views/department/DeptUsage.vue')
 const DeptRepair = () => import('@/views/department/DeptRepair.vue')
 const DeptRequests = () => import('@/views/department/DeptRequests.vue')
+const DeptAccount = () => import('@/views/admin/Account.vue')
 
 // Procurement Staff routes
 const ProcLayout = () => import('@/views/procurement/ProcLayout.vue')
@@ -73,11 +74,12 @@ const router = createRouter({
       component: DeptLayout,
       children: [
         { path: '', redirect: '/department/dashboard' },
-        { path: 'dashboard', component: DeptDashboard },
-        { path: 'my-devices', component: DeptMyDevices },
-        { path: 'usage', component: DeptUsage },
-        { path: 'repair', component: DeptRepair },
-        { path: 'requests', component: DeptRequests },
+        { path: 'dashboard', component: DeptDashboard, meta: { title: 'Dashboard' } },
+        { path: 'my-devices', component: DeptMyDevices, meta: { title: 'My Devices' } },
+        { path: 'usage', component: DeptUsage, meta: { title: 'Usage' } },
+        { path: 'repair', component: DeptRepair, meta: { title: 'Repair Request' } },
+        { path: 'requests', component: DeptRequests, meta: { title: 'Equipment Requests' } },
+        { path: 'account', component: DeptAccount, meta: { title: 'Account' } },
       ],
     },
     {

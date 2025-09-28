@@ -4,7 +4,7 @@
     <div class="subtitle" style="margin-top:8px;">Ticket pool from department users.</div>
 
     <!-- Filters -->
-    <div class="filters" style="margin-top:16px; display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:12px;">
+    <div class="ui-toolbar" style="margin-top:16px;">
       <div>
         <label>Status</label>
         <MultiSelect v-model="filters.statuses" :options="statuses.map(s => ({ value: s, label: statusLabels[s] }))" placeholder="All status" />
@@ -20,7 +20,7 @@
 
     <!-- Ticket table -->
     <div class="table-wrapper" style="margin-top:16px; overflow:auto;">
-      <table class="table" style="table-layout:fixed; width:100%;">
+      <table class="ui-table" style="table-layout:auto; width:100%;">
         <thead>
         <tr>
           <th>ID</th>

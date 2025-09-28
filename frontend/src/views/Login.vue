@@ -11,10 +11,45 @@
           <input class="input" type="password" v-model="password" placeholder="Enter password" />
           <div class="actions">
             <button class="btn btn-primary" type="submit">Sign In</button>
-            <a class="forgot" :href="mailtoHref">Forgot password?</a>
+            <button class="btn" type="button" @click="openReset">Forgot password?</button>
           </div>
           <div v-if="error" class="error">{{ error }}</div>
         </form>
+      </div>
+      <!-- Reset Password Modal -->
+      <div v-if="reset.open" class="ui-modal-backdrop">
+        <div class="ui-modal card">
+          <div class="title-lg">Reset Password</div>
+          <div v-if="reset.step===1" class="ui-form-grid">
+            <div style="grid-column:1/-1">
+              <label>Email</label>
+              <input class="input" v-model="reset.email" placeholder="you@example.com" />
+            </div>
+          </div>
+          <div v-else-if="reset.step===2" class="ui-form-grid">
+            <div style="grid-column:1/-1; color: var(--color-muted);">We have sent a 6-digit code to your email. The code is valid for 120 seconds.</div>
+            <div>
+              <label>Verification Code</label>
+              <input class="input" v-model="reset.code" placeholder="6 digits" />
+            </div>
+          </div>
+          <div v-else class="ui-form-grid">
+            <div>
+              <label>New Password</label>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <input class="input" :type="reset.show ? 'text' : 'password'" v-model="reset.newPwd" placeholder="New password" />
+                <button class="btn" style="width:auto;" @click="reset.show=!reset.show">{{ reset.show ? 'Hide' : 'Show' }}</button>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:16px;">
+            <button class="btn" @click="reset.open=false">Close</button>
+            <button v-if="reset.step===1" class="btn btn-primary" :disabled="reset.sending" @click="sendCode">Send code</button>
+            <button v-else-if="reset.step===2" class="btn btn-primary" :disabled="reset.sending" @click="verifyCode">Verify</button>
+            <button v-else class="btn btn-primary" :disabled="reset.sending" @click="commitReset">Reset password</button>
+          </div>
+          <div v-if="reset.error" style="color:#dc2626; font-size:12px; margin-top:8px;">{{ reset.error }}</div>
+        </div>
       </div>
     </div>
   </div>
@@ -22,14 +57,50 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
+function showDialog(message) {
+  let overlay = document.createElement('div')
+  overlay.style.position = 'fixed'
+  overlay.style.inset = '0'
+  overlay.style.background = 'rgba(0,0,0,0.35)'
+  overlay.style.display = 'flex'
+  overlay.style.alignItems = 'center'
+  overlay.style.justifyContent = 'center'
+  overlay.style.zIndex = '9999'
+  const box = document.createElement('div')
+  box.className = 'card'
+  box.style.padding = '16px'
+  box.style.maxWidth = '420px'
+  box.style.minWidth = '280px'
+  box.innerHTML = `<div style="font-weight:700;">Notice</div><div style="margin-top:8px;">${message}</div><div style="margin-top:12px; display:flex; justify-content:flex-end;"><button id="ok" class="btn btn-primary">OK</button></div>`
+  overlay.appendChild(box)
+  document.body.appendChild(overlay)
+  overlay.querySelector('#ok').addEventListener('click', () => { document.body.removeChild(overlay) })
+}
 
 const router = useRouter()
 const name = ref('')
 const password = ref('')
 const error = ref('')
-const mailtoHref = 'mailto:support@example.com?subject=Forgot%20Password'
+const reset = reactive({ open: false, step: 1, email: '', code: '', newPwd: '', show: false, sending: false, error: '' })
+function openReset(){ reset.open = true; reset.step = 1; reset.email=''; reset.code=''; reset.error='' }
+async function sendCode(){
+  reset.error = ''; if (!reset.email) { reset.error = 'Email is required'; return }
+  try { reset.sending = true; const r = await fetch(`/req/getVCode?email=${encodeURIComponent(reset.email)}`); const j = await r.json(); if (j.code !== '000') reset.error = j.message || 'Failed to send code'; else reset.step = 2 } catch { reset.error = 'Network error' } finally { reset.sending = false }
+}
+
+async function verifyCode(){
+  reset.error = '';
+  if (!reset.code) { reset.error = 'Code is required'; return }
+  try { reset.sending = true; const r = await fetch('/req/account/verifyCode', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: reset.email, code: reset.code }) }); const j = await r.json(); if (j.code !== '000') reset.error = j.message || 'Invalid or expired code'; else reset.step = 3 } catch { reset.error = 'Network error' } finally { reset.sending = false }
+}
+
+async function commitReset(){
+  reset.error = '';
+  if (!reset.newPwd) { reset.error = 'New password is required'; return }
+  try { reset.sending = true; const r = await fetch('/req/account/commitReset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: reset.email, code: reset.code, newPwd: reset.newPwd }) }); const j = await r.json(); if (j.code !== '000') reset.error = j.message || 'Failed to reset password'; else { reset.open = false; showDialog('Password reset successfully. Please sign in with your new password.') } } catch { reset.error = 'Network error' } finally { reset.sending = false }
+}
 
 async function onSubmit() {
   error.value = ''
@@ -116,5 +187,7 @@ async function onSubmit() {
   margin-top: 8px;
 }
 </style>
+
+ 
 
 

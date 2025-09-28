@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="card" style="padding:16px;">
     <div class="grid">
       <StatCard label="In-Use Devices" :value="inUse" />
       <StatCard label="Devices Under Repair" :value="underRepair" />
