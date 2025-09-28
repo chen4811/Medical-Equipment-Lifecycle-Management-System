@@ -221,14 +221,11 @@ const modal = reactive({
 })
 const showPassword = ref(false)
 
-function base64EncodeUnicode(str) {
-  try {
-    return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function(match, p1) {
-      return String.fromCharCode('0x' + p1)
-    }))
-  } catch (e) {
-    return btoa(str)
-  }
+async function sha256Hex(message) {
+  const msgUint8 = new TextEncoder().encode(message)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
 function nextUserId() { return '' }
@@ -293,11 +290,11 @@ async function save() {
   if (modal.mode === 'create' && (!p.password || !p.password.trim())) { return showDialog('Password is required') }
   const operatorId = localStorage.getItem('account_id') || '0'
   if (modal.mode === 'create') {
-    const resp = await fetch('/req/admin/user', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: p.username, password: p.password ? base64EncodeUnicode(p.password) : '', role: denormalizeRole(p.roleId), department_id: p.departmentId, email: p.email || '', operator_id: operatorId }) })
+    const resp = await fetch('/req/admin/user', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: p.username, password: p.password ? await sha256Hex(p.password) : '', role: denormalizeRole(p.roleId), department_id: p.departmentId, email: p.email || '', operator_id: operatorId }) })
     const json = await resp.json().catch(() => ({ code: 'ERR' }))
     if (json.code !== '000') { return showDialog(json.message || 'Failed to add user') }
   } else {
-    const resp = await fetch('/req/admin/user', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ account_id: String(p.id), name: p.username, password: p.password ? base64EncodeUnicode(p.password) : '', role: denormalizeRole(p.roleId), department_id: p.departmentId, email: p.email || '', operator_id: operatorId }) })
+    const resp = await fetch('/req/admin/user', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ account_id: String(p.id), name: p.username, password: p.password ? await sha256Hex(p.password) : '', role: denormalizeRole(p.roleId), department_id: p.departmentId, email: p.email || '', operator_id: operatorId }) })
     const json = await resp.json().catch(() => ({ code: 'ERR' }))
     if (json.code !== '000') { return showDialog(json.message || 'Failed to update user') }
   }
