@@ -7,8 +7,7 @@
       <table class="ui-table" style="table-layout:auto; width:100%;">
         <thead>
           <tr>
-            <th>Scrap ID</th>
-            <th>Device</th>
+            <th>DeviceID</th>
             <th>Reason</th>
             <th>Status</th>
             <th>Record</th>
@@ -18,17 +17,11 @@
         </thead>
         <tbody>
           <tr v-for="s in state.list" :key="s.id">
-            <td>{{ s.id }}</td>
             <td>{{ s.deviceId }}</td>
             <td style="white-space:normal;">{{ s.reason }}</td>
             <td>{{ s.status }}</td>
             <td><input class="input" v-model="s.record" placeholder="Disposal record" /></td>
-            <td>
-              <div class="scrap-photo">
-                <img v-if="s.photoUrl" :src="s.photoUrl" alt="scrap" />
-                <div v-else class="muted">No photo</div>
-              </div>
-            </td>
+
             <td>
               <label class="btn">
                 Upload Photo

@@ -1,5 +1,6 @@
 package com.example.melms.service;
 
+import com.example.melms.mapper.LogMapper;
 import com.example.melms.mapper.RepairTicketMapper;
 import com.example.melms.mapper.ScrapApplicationMapper;
 import com.example.melms.pojo.DashboardVO;
@@ -24,6 +25,9 @@ public class EquipmentService {
     @Resource
     private ScrapApplicationMapper scrapApplicationMapper;
 
+    @Resource
+    LogMapper logMapper;
+
     public List<Equipment> listAll() {
         return equipmentMapper.findAll();
     }
@@ -36,9 +40,16 @@ public class EquipmentService {
         return equipmentMapper.update(equipment);
     }
 
-    public int deleteById(String id) {
-        return equipmentMapper.delete(id);
+    public void deleteById(String id, String accountId) {
+        int result = equipmentMapper.delete(id);
+
+        if (result > 0) {
+            String action = "Delete device with ID: " + id;
+            logMapper.addNewLog(action, accountId);
+        }
+
     }
+
 
     public Equipment findById(int id) {
         return equipmentMapper.findById(id);

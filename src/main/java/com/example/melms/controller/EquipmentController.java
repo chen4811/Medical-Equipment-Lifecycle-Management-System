@@ -157,10 +157,14 @@ public class EquipmentController {
     }
 
     @DeleteMapping("/devices/{id}")
-    public Map<String,String> deleteDevice(@PathVariable String id) {
-        equipmentService.deleteById(id);
+    public Map<String, String> deleteDevice(
+            @PathVariable String id,
+            @RequestHeader("X-Account-Id") String accountId) {
+
+        equipmentService.deleteById(id, accountId);
         return Collections.singletonMap("result", "ok");
     }
+
 
     @GetMapping("/departments")
     public List<Department> getDepartments() {

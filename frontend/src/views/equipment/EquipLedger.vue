@@ -41,7 +41,7 @@
     <div class="cards" style="margin-top:16px; display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:12px;">
       <div v-for="d in filtered" :key="d.equipmentId" class="device-card card" @click="openDetail(d)" style="cursor:pointer; padding:0; overflow:hidden;">
         <div class="image-wrap">
-          <img :src="getDeviceImageUrl(d.equipmentId)" @error="onDeviceImgError" alt="device" />
+          <img :src="getDeviceImage(d.equipmentTypeName)" @error="DeviceImgError" alt="device" />
           <div class="status-badge" :data-status="d.status">{{ d.status }}</div>
         </div>
         <div style="padding:12px; display:grid; gap:6px;">
@@ -127,6 +127,12 @@ import { reactive, ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import MultiSelect from '@/components/MultiSelect.vue'
 import { getDeviceImageUrl, onDeviceImgError } from '@/utils/images.js'
+import xray from '@/assets/xray.png'
+import ecg from '@/assets/ecg.png'
+import defibrillator from '@/assets/defibrillator.png'
+import bloodAnalyzer from '@/assets/blood_analyzer.png'
+import infusionPump from '@/assets/infusion_pump.png'
+import defaultImg from '@/assets/defaultImg.png'
 
 const state = reactive({ devices: [] })
 const departments = ref([])
@@ -154,6 +160,23 @@ async function loadData() {
   } catch (err) {
     console.error('Failed to load device data.', err)
   }
+}
+
+const deviceImageMap = {
+  'X-Ray Machine': xray,
+  'ECG Monitor': ecg,
+  'Defibrillator': defibrillator,
+  'Blood Analyzer': bloodAnalyzer,
+  'Infusion Pump': infusionPump
+}
+
+function getDeviceImage(typeName) {
+  let defaultImg;
+  return deviceImageMap[typeName] || defaultImg
+}
+
+function DeviceImgError(event) {
+  event.target.src = defaultImg
 }
 
 onMounted(() => {
@@ -268,7 +291,10 @@ async function upload(kind, d) {
 async function deleteEquipmentPrompt(d) {
   if (!confirm(`Delete equipment ${d.equipmentId}?`)) return
   try {
-    await axios.delete(`/req/devices/${encodeURIComponent(d.equipmentId)}`)
+    const accountId = localStorage.getItem('account_id');
+    await axios.delete(`/devices/${d.equipmentId}`, {
+      headers: { 'X-Account-Id': accountId }
+    });
     state.devices = state.devices.filter(x => x.equipmentId !== d.equipmentId)
   } catch (err) {
     console.error('Delete failed', err)
