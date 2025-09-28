@@ -102,7 +102,8 @@ function resetFilters() {
 }
 
 function exportCsv() {
-  const rows = [['Time','User','Target','Action'], ...filtered.value.map(r => [r.timestamp, r.user, r.target, r.action])]
+  try { fetch('/req/admin/log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ log_action: 'Export CSV (logs)', log_user_id: localStorage.getItem('account_id') || '0' }) }) } catch {}
+  const rows = [['Time','User ID','Action'], ...filtered.value.map(r => [r.log_time, r.log_user_id, r.log_action])]
   const csv = rows.map(r => r.map(x => `"${String(x).replaceAll('"','""')}"`).join(',')).join('\n')
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)

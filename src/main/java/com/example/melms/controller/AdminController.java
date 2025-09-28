@@ -85,6 +85,16 @@ public class AdminController {
             if (password == null || password.trim().isEmpty()) return Result.fail("400","Password is required", null);
             if (adminMapper.countByName(name) > 0) return Result.fail("409","Name already exists", null);
             adminMapper.addNewUser(name, password, role, departmentId, email);
+            try {
+                String operatorId = payload.getOrDefault("operator_id", "0");
+                // 需要查询新用户ID
+                List<Map<String, Object>> users = adminMapper.listUsers();
+                String targetId = "";
+                for (Map<String, Object> u : users) {
+                    if (name.equals(String.valueOf(u.get("username")))) { targetId = String.valueOf(u.get("id")); break; }
+                }
+                logMapper.addNewLog("Add User (targetId=" + targetId + ")", operatorId);
+            } catch (Exception ignore) {}
             return Result.success("ok", null);
         } catch (Exception e) {
             return Result.fail("500", e.getMessage(), null);
@@ -108,6 +118,10 @@ public class AdminController {
             } else {
                 adminMapper.updateUser(accountId, name, password, role, departmentId, email);
             }
+            try {
+                String operatorId = payload.getOrDefault("operator_id", "0");
+                logMapper.addNewLog("Edit User (targetId=" + accountId + ")", operatorId);
+            } catch (Exception ignore) {}
             return Result.success("ok", null);
         } catch (Exception e) {
             return Result.fail("500", e.getMessage(), null);
@@ -116,9 +130,10 @@ public class AdminController {
 
     // User Management - delete
     @DeleteMapping("/req/admin/user")
-    public Result deleteUser(@RequestParam int accountId) {
+    public Result deleteUser(@RequestParam int accountId, @RequestParam(required = false, defaultValue = "0") String operator_id) {
         try {
             adminMapper.deleteUser(accountId);
+            try { logMapper.addNewLog("Delete User (targetId=" + accountId + ")", operator_id); } catch (Exception ignore) {}
             return Result.success("ok", null);
         } catch (Exception e) {
             return Result.fail("500", e.getMessage(), null);
@@ -137,6 +152,13 @@ public class AdminController {
                 if (ok == 0) return Result.fail("401","Current password incorrect", null);
             }
             adminMapper.resetPassword(accountId, newPwd);
+            try {
+                String operatorId = payload.getOrDefault("operator_id", payload.getOrDefault("accountId", "0"));
+                logMapper.addNewLog("Admin Reset Password (targetId=" + accountId + ")", operatorId);
+                if (operatorId.equals(String.valueOf(accountId))) {
+                    logMapper.addNewLog("Self Change Password", operatorId);
+                }
+            } catch (Exception ignore) {}
             return Result.success("ok", null);
         } catch (Exception e) {
             return Result.fail("500", e.getMessage(), null);
@@ -175,6 +197,16 @@ public class AdminController {
             if (departmentName == null || departmentName.trim().isEmpty()) return Result.fail("400","Department name is required", null);
             if (adminMapper.countDepartmentByName(departmentName) > 0) return Result.fail("409","Department name already exists", null);
             adminMapper.addNewDepartment(departmentName);
+            try {
+                String operatorId = payload.getOrDefault("operator_id", "0");
+                // 查询新增部门id
+                List<Map<String, Object>> deps = adminMapper.getDepartments();
+                String targetId = "";
+                for (Map<String, Object> d : deps) {
+                    if (departmentName.equals(String.valueOf(d.get("name")))) { targetId = String.valueOf(d.get("id")); break; }
+                }
+                logMapper.addNewLog("Add Department (targetId=" + targetId + ")", operatorId);
+            } catch (Exception ignore) {}
             return Result.success("ok", null);
         } catch (Exception e) {
             return Result.fail("500", e.getMessage(), null);
@@ -190,6 +222,10 @@ public class AdminController {
             if (departmentName == null || departmentName.trim().isEmpty()) return Result.fail("400","Department name is required", null);
             if (adminMapper.countDepartmentByNameExcludingId(departmentName, departmentId) > 0) return Result.fail("409","Department name already exists", null);
             adminMapper.updateDepartmentName(departmentId, departmentName);
+            try {
+                String operatorId = payload.getOrDefault("operator_id", "0");
+                logMapper.addNewLog("Edit Department (targetId=" + departmentId + ")", operatorId);
+            } catch (Exception ignore) {}
             return Result.success("ok", null);
         } catch (Exception e) {
             return Result.fail("500", e.getMessage(), null);
@@ -198,9 +234,10 @@ public class AdminController {
 
     // Departments - delete
     @DeleteMapping("/req/admin/delDepartment")
-    public Result delDepartment(@RequestParam String departmentId) {
+    public Result delDepartment(@RequestParam String departmentId, @RequestParam(required = false, defaultValue = "0") String operator_id) {
         try {
             adminMapper.deleteDepartment(departmentId);
+            try { logMapper.addNewLog("Delete Department (targetId=" + departmentId + ")", operator_id); } catch (Exception ignore) {}
             return Result.success("ok", null);
         } catch (Exception e) {
             return Result.fail("500", e.getMessage(), null);

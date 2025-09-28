@@ -72,6 +72,16 @@ const pwd = reactive({ current: '', next: '', confirm: '' })
 const show = reactive({ cur: false, new: false, confirm: false })
 const pwdModal = ref(false)
 
+function base64EncodeUnicode(str) {
+  try {
+    return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function(match, p1) {
+      return String.fromCharCode('0x' + p1)
+    }))
+  } catch (e) {
+    return btoa(str)
+  }
+}
+
 function toast(msg) {
   let overlay = document.createElement('div')
   overlay.style.position = 'fixed'
@@ -120,7 +130,7 @@ async function changePassword() {
   const accountId = localStorage.getItem('account_id') || ''
   if (!accountId) return toast('Not logged in')
   try {
-    const resp = await fetch('/req/admin/resetPwd', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accountId, newPwd: pwd.next }) })
+    const resp = await fetch('/req/admin/resetPwd', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accountId, newPwd: base64EncodeUnicode(pwd.next), currentPwd: pwd.current ? base64EncodeUnicode(pwd.current) : '', operator_id: accountId }) })
     const json = await resp.json()
     if (json.code === '000') { toast('Password updated'); closePwdModal() } else { toast(json.message || 'Failed to update') }
   } catch {

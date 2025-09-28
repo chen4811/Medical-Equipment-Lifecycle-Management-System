@@ -84,6 +84,17 @@ const name = ref('')
 const password = ref('')
 const error = ref('')
 const reset = reactive({ open: false, step: 1, email: '', code: '', newPwd: '', show: false, sending: false, error: '' })
+
+// Encode Unicode safely to Base64 for transmission
+function base64EncodeUnicode(str) {
+  try {
+    return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function(match, p1) {
+      return String.fromCharCode('0x' + p1)
+    }))
+  } catch (e) {
+    return btoa(str)
+  }
+}
 function openReset(){ reset.open = true; reset.step = 1; reset.email=''; reset.code=''; reset.error='' }
 async function sendCode(){
   reset.error = ''; if (!reset.email) { reset.error = 'Email is required'; return }
@@ -99,7 +110,7 @@ async function verifyCode(){
 async function commitReset(){
   reset.error = '';
   if (!reset.newPwd) { reset.error = 'New password is required'; return }
-  try { reset.sending = true; const r = await fetch('/req/account/commitReset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: reset.email, code: reset.code, newPwd: reset.newPwd }) }); const j = await r.json(); if (j.code !== '000') reset.error = j.message || 'Failed to reset password'; else { reset.open = false; showDialog('Password reset successfully. Please sign in with your new password.') } } catch { reset.error = 'Network error' } finally { reset.sending = false }
+  try { reset.sending = true; const r = await fetch('/req/account/commitReset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: reset.email, code: reset.code, newPwd: base64EncodeUnicode(reset.newPwd) }) }); const j = await r.json(); if (j.code !== '000') reset.error = j.message || 'Failed to reset password'; else { reset.open = false; showDialog('Password reset successfully. Please sign in with your new password.') } } catch { reset.error = 'Network error' } finally { reset.sending = false }
 }
 
 async function onSubmit() {
@@ -108,7 +119,7 @@ async function onSubmit() {
     const resp = await fetch(`/req/account/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name.value, password: password.value }),
+      body: JSON.stringify({ name: name.value, password: base64EncodeUnicode(password.value) }),
     })
     if (!resp.ok) throw new Error('HTTP')
     const json = await resp.json()
