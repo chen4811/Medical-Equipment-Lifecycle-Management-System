@@ -2,6 +2,7 @@ package com.example.melms.controller;
 
 import com.example.melms.mapper.LoginMapper;
 import com.example.melms.mapper.LogMapper;
+import com.example.melms.controller.AdminController; // for maintenance mode flag
 import com.example.melms.pojo.Result;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -29,6 +30,19 @@ public class LoginController {
     public Result login(@RequestBody Map<String, String> params) {
         String name = params.get("name");
         String password = params.get("password");
+        // Maintenance mode: only Admin can login
+        try {
+            java.lang.reflect.Field f = AdminController.class.getDeclaredField("MAINTENANCE_MODE");
+            f.setAccessible(true);
+            java.util.concurrent.atomic.AtomicBoolean flag = (java.util.concurrent.atomic.AtomicBoolean) f.get(null);
+            if (flag.get()) {
+                Map<String,Object> pre = loginMapper.login(name, password);
+                if (pre == null || pre.get("role") == null || !"Admin".equals(String.valueOf(pre.get("role")))) {
+                    try { logMapper.addNewLog("Maintenance Mode Blocked Login (name=" + String.valueOf(name) + ")", "0"); } catch (Exception ignore) {}
+                    return Result.fail("503","Service under maintenance", null);
+                }
+            }
+        } catch (Exception ignore) {}
         Map<String,Object> res = loginMapper.login(name, password);
         if (res != null && res.get("account_id") != null) {
             try { logMapper.addNewLog("Login Success", String.valueOf(res.get("account_id"))); } catch (Exception ignore) {}

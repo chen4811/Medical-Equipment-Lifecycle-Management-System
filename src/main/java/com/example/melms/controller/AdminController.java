@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @RestController
 public class AdminController {
@@ -18,6 +19,8 @@ public class AdminController {
 
     @Resource
     private LogMapper logMapper;
+
+    private static final AtomicBoolean MAINTENANCE_MODE = new AtomicBoolean(false);
 
     // Dashboard - overall stats
     @GetMapping("/req/admin/overall")
@@ -270,12 +273,28 @@ public class AdminController {
     // System setting - skip for now
     @GetMapping("/req/admin/getMaintenanceModeStatus")
     public Result getMaintenanceModeStatus() {
-        return Result.fail("501","Not implemented",null);
+        try {
+            Map<String,Object> data = new HashMap<>();
+            data.put("enabled", MAINTENANCE_MODE.get());
+            return Result.success("ok", data);
+        } catch (Exception e) {
+            return Result.fail("500", e.getMessage(), null);
+        }
     }
 
-    @GetMapping("/req/admin/changeMaintenanceModeStatus")
-    public Result changeMaintenanceModeStatus() {
-        return Result.fail("501","Not implemented",null);
+    @PostMapping("/req/admin/changeMaintenanceModeStatus")
+    public Result changeMaintenanceModeStatus(@RequestBody Map<String,String> payload) {
+        try {
+            boolean enabled = Boolean.parseBoolean(payload.getOrDefault("enabled", "false"));
+            String operatorId = payload.getOrDefault("operator_id", "0");
+            MAINTENANCE_MODE.set(enabled);
+            try { logMapper.addNewLog(enabled ? "Enable Maintenance Mode" : "Disable Maintenance Mode", operatorId); } catch (Exception ignore) {}
+            Map<String,Object> data = new HashMap<>();
+            data.put("enabled", MAINTENANCE_MODE.get());
+            return Result.success("ok", data);
+        } catch (Exception e) {
+            return Result.fail("500", e.getMessage(), null);
+        }
     }
 
     // Aggregated dashboard endpoint (single call for frontend)

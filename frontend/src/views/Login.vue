@@ -121,8 +121,16 @@ async function onSubmit() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: name.value, password: base64EncodeUnicode(password.value) }),
     })
+    if (resp.status === 503) {
+      showDialog('The system is currently under maintenance; only administrators can log in. Please try again later.')
+      return
+    }
     if (!resp.ok) throw new Error('HTTP')
     const json = await resp.json()
+    if (json && json.code === '503') {
+      showDialog('The system is currently under maintenance; only administrators can log in. Please try again later.')
+      return
+    }
     if (json && json.code === '000') {
       const id = String(json.data?.account_id || '')
       const role = String(json.data?.role || '')
