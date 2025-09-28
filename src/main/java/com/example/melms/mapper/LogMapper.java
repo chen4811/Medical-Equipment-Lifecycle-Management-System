@@ -4,6 +4,7 @@ import com.example.melms.pojo.Log;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Param;
 
 @Mapper
 public interface LogMapper {
@@ -11,11 +12,11 @@ public interface LogMapper {
     Log[] getLogs();
 
     @Insert("INSERT INTO tb_log (log_action, log_user_id) VALUES (#{log_action}, #{log_user_id})")
-    void addNewLog(String log_action, String log_user_id);
+    void addNewLog(@Param("log_action") String log_action, @Param("log_user_id") String log_user_id);
 
     @Select("SELECT COUNT(*) FROM tb_usage_logging l " +
             "JOIN tb_equipment e ON l.target_equipment_id = e.equipment_id " +
             "WHERE DATE(l.time) = CURDATE() " +
             "AND e.department_id = #{departmentId}")
-    int countLogsForToday(String departmentId);
+    int countLogsForToday(@Param("departmentId") String departmentId);
 }

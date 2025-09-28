@@ -21,4 +21,7 @@ public interface LoginMapper {
 
     @Update("UPDATE tb_account SET password = #{password} WHERE email = #{email}")
     int updatePasswordByEmail(@Param("email") String email, @Param("password") String password);
+
+    @Select("SELECT account_id FROM tb_account WHERE name = #{name} LIMIT 1")
+    Integer findIdByName(@Param("name") String name);
 }

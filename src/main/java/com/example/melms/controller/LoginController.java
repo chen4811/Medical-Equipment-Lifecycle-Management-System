@@ -1,6 +1,8 @@
 package com.example.melms.controller;
 
 import com.example.melms.mapper.LoginMapper;
+import com.example.melms.mapper.LogMapper;
+import com.example.melms.controller.AdminController; // for maintenance mode flag
 import com.example.melms.pojo.Result;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -20,15 +22,41 @@ public class LoginController {
     @Resource
     private JavaMailSender mailSender;
 
+    @Resource
+    private LogMapper logMapper;
+
     private final Map<String, CodeEntry> emailCodeCache = new ConcurrentHashMap<>();
     @PostMapping("/req/account/login")
     public Result login(@RequestBody Map<String, String> params) {
         String name = params.get("name");
         String password = params.get("password");
+        // Maintenance mode: only Admin can login
+        try {
+            java.lang.reflect.Field f = AdminController.class.getDeclaredField("MAINTENANCE_MODE");
+            f.setAccessible(true);
+            java.util.concurrent.atomic.AtomicBoolean flag = (java.util.concurrent.atomic.AtomicBoolean) f.get(null);
+            if (flag.get()) {
+                Map<String,Object> pre = loginMapper.login(name, password);
+                if (pre == null || pre.get("role") == null || !"Admin".equals(String.valueOf(pre.get("role")))) {
+                    try { logMapper.addNewLog("Maintenance Mode Blocked Login (name=" + String.valueOf(name) + ")", "0"); } catch (Exception ignore) {}
+                    return Result.fail("503","Service under maintenance", null);
+                }
+            }
+        } catch (Exception ignore) {}
         Map<String,Object> res = loginMapper.login(name, password);
         if (res != null && res.get("account_id") != null) {
+            try { logMapper.addNewLog("Login Success", String.valueOf(res.get("account_id"))); } catch (Exception ignore) {}
             return Result.success("ok", res);
         }
+        Integer uid = null;
+        try { uid = loginMapper.findIdByName(name); } catch (Exception ignore) {}
+        try {
+            if (uid == null) {
+                logMapper.addNewLog("Login Unknown User (name=" + String.valueOf(name) + ")", "0");
+            } else {
+                logMapper.addNewLog("Login Failed (name=" + String.valueOf(name) + ")", String.valueOf(uid));
+            }
+        } catch (Exception ignore) {}
         return Result.fail("401","Invalid credentials",null);
     }
 
@@ -75,7 +103,14 @@ public class LoginController {
             if (entry == null || !entry.valid(code)) return Result.fail("400","Invalid or expired code", null);
             if (newPwd == null || newPwd.isBlank()) return Result.fail("400","Password required", null);
             int n = loginMapper.updatePasswordByEmail(email, newPwd);
-            if (n > 0) { emailCodeCache.remove(email); return Result.success("ok", null); }
+            if (n > 0) {
+                emailCodeCache.remove(email);
+                try {
+                    String uidStr = String.valueOf(loginMapper.findByEmail(email).get("account_id"));
+                    logMapper.addNewLog("Password Reset Success (email=" + String.valueOf(email) + ")", uidStr);
+                } catch (Exception ignore) {}
+                return Result.success("ok", null);
+            }
             return Result.fail("404","Email not found", null);
         } catch (Exception e) {
             return Result.fail("500", e.getMessage(), null);

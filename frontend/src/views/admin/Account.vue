@@ -72,6 +72,13 @@ const pwd = reactive({ current: '', next: '', confirm: '' })
 const show = reactive({ cur: false, new: false, confirm: false })
 const pwdModal = ref(false)
 
+async function sha256Hex(message) {
+  const msgUint8 = new TextEncoder().encode(message)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
 function toast(msg) {
   let overlay = document.createElement('div')
   overlay.style.position = 'fixed'
@@ -120,7 +127,7 @@ async function changePassword() {
   const accountId = localStorage.getItem('account_id') || ''
   if (!accountId) return toast('Not logged in')
   try {
-    const resp = await fetch('/req/admin/resetPwd', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accountId, newPwd: pwd.next }) })
+    const resp = await fetch('/req/admin/resetPwd', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accountId, newPwd: await sha256Hex(pwd.next), currentPwd: pwd.current ? await sha256Hex(pwd.current) : '', operator_id: accountId }) })
     const json = await resp.json()
     if (json.code === '000') { toast('Password updated'); closePwdModal() } else { toast(json.message || 'Failed to update') }
   } catch {

@@ -145,12 +145,13 @@ async function refresh() {
 async function save() {
   const payload = { ...modal.form }
   if (!payload.name || !payload.name.trim()) { return showDialog('Department name is required') }
+  const operatorId = localStorage.getItem('account_id') || '0'
   if (modal.mode === 'create') {
-    const resp = await fetch('/req/admin/newDepartment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ department_name: payload.name }) })
+    const resp = await fetch('/req/admin/newDepartment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ department_name: payload.name, operator_id: operatorId }) })
     const json = await resp.json().catch(() => ({ code: 'ERR' }))
     if (json.code !== '000') { return showDialog(json.message || 'Failed to add department') }
   } else {
-    const resp = await fetch('/req/admin/changeDepartmentName', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ department_id: payload.id, department_name: payload.name }) })
+    const resp = await fetch('/req/admin/changeDepartmentName', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ department_id: payload.id, department_name: payload.name, operator_id: operatorId }) })
     const json = await resp.json().catch(() => ({ code: 'ERR' }))
     if (json.code !== '000') { return showDialog(json.message || 'Failed to update department') }
   }
@@ -160,7 +161,8 @@ async function save() {
 
 async function remove(dep) {
   if (!(await showConfirm(`Delete department "${dep.name}"?`))) return
-  const resp = await fetch(`/req/admin/delDepartment?departmentId=${encodeURIComponent(dep.id)}`, { method: 'DELETE' })
+  const operatorId = localStorage.getItem('account_id') || '0'
+  const resp = await fetch(`/req/admin/delDepartment?departmentId=${encodeURIComponent(dep.id)}&operator_id=${encodeURIComponent(operatorId)}`, { method: 'DELETE' })
   const json = await resp.json().catch(() => ({ code: 'ERR' }))
   if (json.code !== '000') return showDialog(json.message || 'Failed to delete department')
   await refresh()

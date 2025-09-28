@@ -84,6 +84,14 @@ const name = ref('')
 const password = ref('')
 const error = ref('')
 const reset = reactive({ open: false, step: 1, email: '', code: '', newPwd: '', show: false, sending: false, error: '' })
+
+// Compute SHA-256 hash and return hex string
+async function sha256Hex(message) {
+  const msgUint8 = new TextEncoder().encode(message)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+}
 function openReset(){ reset.open = true; reset.step = 1; reset.email=''; reset.code=''; reset.error='' }
 async function sendCode(){
   reset.error = ''; if (!reset.email) { reset.error = 'Email is required'; return }
@@ -99,7 +107,7 @@ async function verifyCode(){
 async function commitReset(){
   reset.error = '';
   if (!reset.newPwd) { reset.error = 'New password is required'; return }
-  try { reset.sending = true; const r = await fetch('/req/account/commitReset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: reset.email, code: reset.code, newPwd: reset.newPwd }) }); const j = await r.json(); if (j.code !== '000') reset.error = j.message || 'Failed to reset password'; else { reset.open = false; showDialog('Password reset successfully. Please sign in with your new password.') } } catch { reset.error = 'Network error' } finally { reset.sending = false }
+  try { reset.sending = true; const hashed = await sha256Hex(reset.newPwd); const r = await fetch('/req/account/commitReset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: reset.email, code: reset.code, newPwd: hashed }) }); const j = await r.json(); if (j.code !== '000') reset.error = j.message || 'Failed to reset password'; else { reset.open = false; showDialog('Password reset successfully. Please sign in with your new password.') } } catch { reset.error = 'Network error' } finally { reset.sending = false }
 }
 
 async function onSubmit() {
@@ -108,10 +116,18 @@ async function onSubmit() {
     const resp = await fetch(`/req/account/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name.value, password: password.value }),
+      body: JSON.stringify({ name: name.value, password: await sha256Hex(password.value) }),
     })
+    if (resp.status === 503) {
+      showDialog('The system is currently under maintenance; only administrators can log in. Please try again later.')
+      return
+    }
     if (!resp.ok) throw new Error('HTTP')
     const json = await resp.json()
+    if (json && json.code === '503') {
+      showDialog('The system is currently under maintenance; only administrators can log in. Please try again later.')
+      return
+    }
     if (json && json.code === '000') {
       const id = String(json.data?.account_id || '')
       const role = String(json.data?.role || '')
