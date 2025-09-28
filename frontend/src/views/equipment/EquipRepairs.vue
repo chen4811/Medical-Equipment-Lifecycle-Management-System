@@ -130,7 +130,15 @@ async function advanceStatus(t) {
     t.status = next
     if(next==='completed') t.finishedAt = new Date().toISOString()
   }
-  await axios.post(`/req/repair-tickets/${t.ticketId}/advance`, { status: t.status })
+  await axios.post(
+      `/req/repair-tickets/${t.ticketId}/advance`,
+      { status: t.status },
+      {
+        headers: {
+          "X-User-Id": localStorage.getItem("account_id")
+        }
+      }
+  )
 }
 </script>
 

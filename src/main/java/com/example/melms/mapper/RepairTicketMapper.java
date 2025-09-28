@@ -26,7 +26,6 @@ public interface RepairTicketMapper {
     @Select("""
         SELECT status, COUNT(*) AS cnt 
         FROM tb_repair_ticket 
-        WHERE DATE(created_at) = CURDATE() 
         GROUP BY status
     """)
     java.util.List<Map<String, Object>> countTodayTicketsRaw();
@@ -42,13 +41,16 @@ public interface RepairTicketMapper {
             String status = (String)m.get("status");
             int count = ((Number)m.get("cnt")).intValue();
             switch(status) {
-                case "Pending Review" -> map.put("pendingResponse", count);
-                case "In Repair" -> map.put("inProgress", count);
-                case "In Acceptance" -> map.put("pendingAcceptance", count);
+                case "pending" -> map.put("pendingResponse", count);
+                case "in-progress" -> map.put("inProgress", count);
+                case "under-acceptance" -> map.put("pendingAcceptance", count);
             }
         }
         return map;
     }
+
+    @Update("UPDATE tb_repair_ticket SET status = #{status}, updated_at = NOW() WHERE ticket_id = #{ticketId}")
+    int updateStatus(@Param("ticketId") int ticketId, @Param("status") String status);
 
     @Select("SELECT COUNT(*) FROM tb_repair_ticket WHERE status = 'In Repair' AND department_id = #{departmentId}")
     int countPendingRepairTickets(String departmentId);
