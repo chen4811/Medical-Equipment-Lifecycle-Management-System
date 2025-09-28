@@ -1,6 +1,7 @@
 package com.example.melms.controller;
 
 import com.example.melms.mapper.ProcurementMapper;
+import com.example.melms.mapper.LogMapper;
 import com.example.melms.pojo.ProcureOrder;
 import com.example.melms.pojo.Result;
 import jakarta.annotation.Resource;
@@ -15,9 +16,9 @@ public class ProcurementController {
     @Resource
     private ProcurementMapper mapper;
 
-    /* ====================== Suppliers ====================== */
+    @Resource
+    private LogMapper logMapper;
 
-    // 供应商列表
     @GetMapping("/req/proc/vendors")
     public Result listVendors() {
         try {
@@ -29,7 +30,6 @@ public class ProcurementController {
         }
     }
 
-    // 新增供应商（自动生成4位 supplier_id）
     @PostMapping("/req/proc/vendor")
     public Result createVendor(@RequestBody Map<String, String> payload) {
         try {
@@ -40,6 +40,14 @@ public class ProcurementController {
             }
             String newId = mapper.nextSupplierId();
             mapper.addVendor(newId, name.trim(), contact);
+
+            try {
+                String operatorId = payload.getOrDefault("operator_id", "0");
+                logMapper.addNewLog("Add Supplier (supplierId=" + newId + ")", operatorId);
+            }
+            catch (Exception ignore) {
+            }
+
             return Result.success("ok", Map.of("supplier_id", newId));
         }
         catch (Exception e) {
@@ -47,9 +55,7 @@ public class ProcurementController {
         }
     }
 
-    /* ================== Equipment Types ==================== */
 
-    // 设备类型列表
     @GetMapping("/req/proc/equipmentTypes")
     public Result listEquipmentTypes() {
         try {
@@ -60,9 +66,6 @@ public class ProcurementController {
         }
     }
 
-    /* ======================== Quotes ======================= */
-
-    // 报价（供应商 × 设备类型）列表
     @GetMapping("/req/proc/quotes")
     public Result listQuotes() {
         try {
@@ -73,7 +76,6 @@ public class ProcurementController {
         }
     }
 
-    // 新建或覆盖报价（若存在则更新）
     @PostMapping("/req/proc/quote")
     public Result addOrUpsertQuote(@RequestBody Map<String, Object> payload) {
         try {
@@ -89,9 +91,21 @@ public class ProcurementController {
             Integer cnt = mapper.countQuote(supplierId, typeId);
             if (cnt != null && cnt > 0) {
                 mapper.updateQuote(supplierId, typeId, price);
+                try {
+                    String operatorId = String.valueOf(payload.getOrDefault("operator_id", "0"));
+                    logMapper.addNewLog("Edit Quote (supplierId=" + supplierId + ", typeId=" + typeId + ", price=" + price + ")", operatorId);
+                }
+                catch (Exception ignore) {
+                }
             }
             else {
                 mapper.addQuote(supplierId, typeId, price);
+                try {
+                    String operatorId = String.valueOf(payload.getOrDefault("operator_id", "0"));
+                    logMapper.addNewLog("Add Quote (supplierId=" + supplierId + ", typeId=" + typeId + ", price=" + price + ")", operatorId);
+                }
+                catch (Exception ignore) {
+                }
             }
             return Result.success("ok", null);
         }
@@ -100,7 +114,6 @@ public class ProcurementController {
         }
     }
 
-    // 更新报价
     @PutMapping("/req/proc/quote")
     public Result updateQuote(@RequestBody Map<String, Object> payload) {
         try {
@@ -109,6 +122,15 @@ public class ProcurementController {
             Number priceNum = (Number) payload.getOrDefault("price", 0);
             int price = priceNum == null ? 0 : priceNum.intValue();
             mapper.updateQuote(supplierId, typeId, price);
+
+            // ➕ 日志
+            try {
+                String operatorId = String.valueOf(payload.getOrDefault("operator_id", "0"));
+                logMapper.addNewLog("Edit Quote (supplierId=" + supplierId + ", typeId=" + typeId + ", price=" + price + ")", operatorId);
+            }
+            catch (Exception ignore) {
+            }
+
             return Result.success("ok", null);
         }
         catch (Exception e) {
@@ -116,12 +138,20 @@ public class ProcurementController {
         }
     }
 
-    // 删除报价
     @DeleteMapping("/req/proc/quote")
     public Result deleteQuote(@RequestParam("supplierId") String supplierId,
-                              @RequestParam("equipmentTypeId") String typeId) {
+                              @RequestParam("equipmentTypeId") String typeId,
+                              @RequestParam(value = "operator_id", required = false, defaultValue = "0") String operatorId) {
         try {
             mapper.deleteQuote(supplierId, typeId);
+
+            // ➕ 日志
+            try {
+                logMapper.addNewLog("Delete Quote (supplierId=" + supplierId + ", typeId=" + typeId + ")", operatorId);
+            }
+            catch (Exception ignore) {
+            }
+
             return Result.success("ok", null);
         }
         catch (Exception e) {
@@ -129,9 +159,6 @@ public class ProcurementController {
         }
     }
 
-    /* ======================== Orders ======================= */
-
-    // 采购订单列表（含 under-review / procuring / arrived / terminated）
     @GetMapping("/req/proc/orders")
     public Result listOrders() {
         try {
@@ -142,13 +169,21 @@ public class ProcurementController {
         }
     }
 
-    // 更新订单状态
     @PutMapping("/req/proc/order/status")
     public Result changeOrderStatus(@RequestBody Map<String, String> payload) {
         try {
             int id = Integer.parseInt(payload.getOrDefault("procure_id", "0"));
             String status = payload.get("status");
             mapper.updateOrderStatus(id, status);
+
+            // ➕ 日志
+            try {
+                String operatorId = payload.getOrDefault("operator_id", "0");
+                logMapper.addNewLog("Change Procure Order Status (procureId=" + id + ", status=" + status + ")", operatorId);
+            }
+            catch (Exception ignore) {
+            }
+
             return Result.success("ok", null);
         }
         catch (Exception e) {
@@ -156,7 +191,6 @@ public class ProcurementController {
         }
     }
 
-    // 指派供应商并更新数量（请购流转为采购中）
     @PutMapping("/req/proc/order/assign")
     public Result assignOrder(@RequestBody Map<String, Object> payload) {
         try {
@@ -164,6 +198,14 @@ public class ProcurementController {
             String supplierId = String.valueOf(payload.get("supplier_id"));
             int count = Integer.parseInt(String.valueOf(payload.getOrDefault("count", "0")));
             mapper.assignOrder(id, supplierId, count);
+
+            try {
+                String operatorId = String.valueOf(payload.getOrDefault("operator_id", "0"));
+                logMapper.addNewLog("Assign Procure Order (procureId=" + id + ", supplierId=" + supplierId + ", count=" + count + ")", operatorId);
+            }
+            catch (Exception ignore) {
+            }
+
             return Result.success("ok", null);
         }
         catch (Exception e) {
