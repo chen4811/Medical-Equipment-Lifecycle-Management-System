@@ -279,7 +279,7 @@ function closeUsage() {
 async function fetchUsageLogs(equipmentId) {
   usage.loading = true
   try {
-    const response = await axios.get('/req/dept/usage/logs', { params: { equipmentId } })
+    const response = await axios.get('/req/dept/usage/logs/equip', { params: { equipmentId } })
     console.log('LOG Response:', response.data);
     usage.list = Array.isArray(response.data) ? response.data : []
   } catch (err) {
@@ -399,7 +399,7 @@ async function saveRepairTicket() {
       status: 'Pending',
       departmentId: departmentId.value,
       requesterId: '2',
-      managerId: ''
+      managerId: '0'
     };
     await axios.post('/req/dept/repair/logs', repairTicketData)
     alert("Repair ticket submitted successfully!")

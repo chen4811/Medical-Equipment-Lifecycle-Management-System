@@ -178,12 +178,12 @@ async function save() {
       status: 'Pending',
       departmentId: departmentId.value,
       requesterId: '2',
-      managerId: ''
+      managerId: '0'
     };
     await axios.post('/req/dept/repair/logs', repairTicketData);
     showDialog('Repair ticket submitted successfully!')
     closeCreate();
-    fetchRepairTickets(modal.form.departmentId); // Fetch updated tickets
+    fetchRepairTickets(departmentId.value); // Fetch updated tickets
   } catch (error) {
     console.error(error);
     showDialog('Failed to submit repair ticket.')

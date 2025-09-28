@@ -66,8 +66,12 @@ public class DepartmentService {
         );
     }
 
-    public List<UsageLog> getUsageLogsByEquipmentId(String recorderId) {
-        return departmentMapper.findByTargetEquipmentId(recorderId);
+    public List<UsageLog> getUsageLogsByRecorderId(String recorderId) {
+        return departmentMapper.findByRecorderId(recorderId);
+    }
+
+    public List<UsageLog> getUsageLogsByEquipmentId(String equipmentId) {
+        return departmentMapper.findByTargetEquipmentId(equipmentId);
     }
 
     public boolean addUsageLog(UsageLog usageLog) {
