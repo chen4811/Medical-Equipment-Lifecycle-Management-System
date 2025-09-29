@@ -36,17 +36,17 @@
                     <th>Qty</th>
                     <th>Vendor</th>
                     <th>Status</th>
-                    <th style="width:220px;">Actions</th>
+                    <!-- Actions 列移除 -->
                 </tr>
                 </thead>
                 <tbody>
                 <tr v-if="loading">
-                    <td colspan="6">
+                    <td colspan="5">
                         <TableSkeleton :rows="6"/>
                     </td>
                 </tr>
                 <tr v-else-if="filtered.length===0">
-                    <td colspan="6">
+                    <td colspan="5">
                         <EmptyState title="No arrivals" hint="Orders marked as 'arrived' will appear here."/>
                     </td>
                 </tr>
@@ -56,16 +56,18 @@
                     <td>{{ o.count }}</td>
                     <td>{{ vendorName(o.supplierId) }}</td>
                     <td>{{ o.status }}</td>
+                    <!-- 操作按钮整段注释掉
                     <td style="white-space:nowrap;">
-                        <button class="btn btn-green" @click="openRegister(o)">Register Receiving</button>
-                        <button class="btn btn-red" style="margin-left:8px;" @click="closeOrder(o)">Close Order</button>
+                      <button class="btn btn-green" @click="openRegister(o)">Register Receiving</button>
+                      <button class="btn btn-red" style="margin-left:8px;" @click="closeOrder(o)">Close Order</button>
                     </td>
+                    -->
                 </tr>
                 </tbody>
             </table>
         </div>
 
-        <!-- Register Receiving Modal -->
+        <!-- Register Receiving Modal（保留，不显示按钮就不会打开） -->
         <div v-if="modal.open" class="ui-modal-backdrop">
             <div class="ui-modal card">
                 <div class="title-lg">Receiving Registration</div>
@@ -146,7 +148,7 @@ const vendorOptions = computed(() => vendors.value.map(v => ({value: String(v.id
 const typeOptions = computed(() => types.value.map(t => ({value: String(t.id), label: t.name})))
 const deptOptions = computed(() => departments.value.map(d => ({value: String(d.id), label: d.name})))
 
-/* -------- filters (like Equipment Ledger) -------- */
+/* -------- filters -------- */
 const filters = reactive({
     keyword: '',
     vendorIds: [],
@@ -172,8 +174,8 @@ const filtered = computed(() => {
         const matchKw = !kw || kwPool.some(s => String(s || '').toLowerCase().includes(kw))
         const matchVendor = filters.vendorIds.length === 0 || filters.vendorIds.includes(String(o.supplierId))
         const matchType = filters.typeIds.length === 0 || filters.typeIds.includes(String(o.equipmentTypeId))
-        // 注意：到货订单还未分配科室，所以部门过滤基于“登记将要分配的部门”业务并不严格，这里仅保留入口（若后端订单已有 department_id 可替换 o.departmentId）
-        const matchDept = filters.departmentIds.length === 0 // 无订单上的 dept 字段，默认放行
+        // 部门过滤目前没有对应字段，默认放行
+        const matchDept = filters.departmentIds.length === 0
         return matchKw && matchVendor && matchType && matchDept
     })
 })
@@ -287,20 +289,20 @@ async function submitRegister() {
     closeModal()
 }
 
-/* 可选：登记完成后关闭订单（将 arrived -> terminated） */
+/* 可选：登记完成后关闭订单（按钮已隐藏，逻辑保留以防后续需要）
 async function closeOrder(o) {
-    if (!confirm(`Close order #${o.procureId}?`)) return
-    const r = await fetch('/req/proc/order/status', {
-        method: 'PUT',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({procure_id: o.procureId, status: 'terminated'})
-    })
-    const j = await r.json().catch(() => ({code: 'ERR'}))
-    if (j.code !== '000') return alert(j.message || 'Failed to close order')
-    orders.value = orders.value.filter(x => x.procureId !== o.procureId)
+  if (!confirm(\`Close order #\${o.procureId}?\`)) return
+  const r = await fetch('/req/proc/order/status', {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({procure_id: o.procureId, status: 'terminated'})
+  })
+  const j = await r.json().catch(() => ({code: 'ERR'}))
+  if (j.code !== '000') return alert(j.message || 'Failed to close order')
+  orders.value = orders.value.filter(x => x.procureId !== o.procureId)
 }
+*/
 
-/* init */
 onMounted(async () => {
     loading.value = true
     try {

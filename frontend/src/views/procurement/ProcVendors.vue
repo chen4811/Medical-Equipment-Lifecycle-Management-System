@@ -7,15 +7,20 @@
 
         <!-- Filters -->
         <div class="ui-toolbar" style="margin-top:12px; display:flex; flex-wrap:wrap; gap:12px;">
-            <input class="input" v-model="filters.keyword" placeholder="Search by supplier / type / contact"
-                   style="min-width:220px;"/>
+            <input
+                class="input"
+                v-model="filters.keyword"
+                placeholder="Search by supplier / type / contact"
+                style="min-width:220px;"
+            />
 
             <div style="min-width:220px;">
                 <label>Supplier</label>
                 <MultiSelect
                     v-model="filters.supplierIds"
                     :options="supplierOptions"
-                    placeholder="All suppliers"/>
+                    placeholder="All suppliers"
+                />
             </div>
 
             <div style="min-width:220px;">
@@ -23,27 +28,40 @@
                 <MultiSelect
                     v-model="filters.typeIds"
                     :options="typeOptions"
-                    placeholder="All types"/>
+                    placeholder="All types"
+                />
             </div>
 
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; min-width:260px;">
                 <div>
                     <label>Min Price</label>
-                    <input class="input" type="number" min="0" step="1" v-model.number="filters.minPrice"
-                           placeholder="0"/>
+                    <input
+                        class="input"
+                        type="number"
+                        min="0"
+                        step="1"
+                        v-model.number="filters.minPrice"
+                        placeholder="0"
+                    />
                 </div>
                 <div>
                     <label>Max Price</label>
-                    <input class="input" type="number" min="0" step="1" v-model.number="filters.maxPrice"
-                           placeholder="Any"/>
+                    <input
+                        class="input"
+                        type="number"
+                        min="0"
+                        step="1"
+                        v-model.number="filters.maxPrice"
+                        placeholder="Any"
+                    />
                 </div>
             </div>
 
             <div style="display:flex; gap:8px; align-items:end;">
                 <button class="btn" @click="resetFilters">Reset</button>
                 <button class="btn" @click="exportCsv">Export CSV</button>
-                <button class="btn btn-primary" @click="openNewOffer">Add Offer</button>
-                <button class="btn" @click="openNewSupplier">Add Supplier</button>
+                <!-- 仅保留 Add Supplier -->
+                <button class="btn btn-primary" @click="openNewSupplier">Add</button>
             </div>
         </div>
 
@@ -67,7 +85,7 @@
                 </tr>
                 <tr v-else-if="filteredRows.length===0">
                     <td colspan="5">
-                        <EmptyState title="No vendors" hint="Try filters or add an offer/supplier."/>
+                        <EmptyState title="No vendors" hint="Try filters or add a supplier with initial offers."/>
                     </td>
                 </tr>
                 <tr v-else v-for="r in filteredRows" :key="r.key">
@@ -76,8 +94,8 @@
                     <td>{{ r.typeName }}</td>
                     <td>{{ money(r.price) }}</td>
                     <td style="white-space:nowrap;">
-                        <button class="btn btn-blue" @click="openEditOffer(r)">Edit Offer</button>
-                        <button class="btn btn-red" style="margin-left:8px;" @click="removeOffer(r)">Delete Offer
+                        <button class="btn btn-blue" @click="openEditOffer(r)">Edit</button>
+                        <button class="btn btn-red" style="margin-left:8px;" @click="removeOffer(r)">Delete
                         </button>
                     </td>
                 </tr>
@@ -85,20 +103,20 @@
             </table>
         </div>
 
-        <!-- Add/Edit Offer Modal -->
+        <!-- Edit Offer Modal (仅用于编辑已有报价) -->
         <div v-if="offerModal.open" class="modal-backdrop">
             <div class="modal card">
-                <div class="title-lg">{{ offerModal.mode === 'create' ? 'Add Offer' : 'Edit Offer' }}</div>
+                <div class="title-lg">Edit</div>
                 <div class="form-grid">
                     <div>
                         <label>Supplier</label>
-                        <select class="input" v-model="offerModal.form.supplierId">
+                        <select class="input" v-model="offerModal.form.supplierId" disabled>
                             <option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.name }}</option>
                         </select>
                     </div>
                     <div>
                         <label>Equipment Type</label>
-                        <select class="input" v-model="offerModal.form.equipmentTypeId">
+                        <select class="input" v-model="offerModal.form.equipmentTypeId" disabled>
                             <option v-for="t in types" :key="t.id" :value="t.id">{{ t.name }}</option>
                         </select>
                     </div>
@@ -107,30 +125,65 @@
                         <input class="input" type="number" min="0" step="1" v-model.number="offerModal.form.price"/>
                     </div>
                 </div>
-                <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:16px;">
+                <div class="footer-actions">
                     <button class="btn" @click="closeOffer">Cancel</button>
                     <button class="btn btn-primary" @click="saveOffer">Save</button>
                 </div>
             </div>
         </div>
 
-        <!-- Add Supplier Modal -->
+        <!-- Add Supplier Modal (精简 & 对齐) -->
         <div v-if="supplierModal.open" class="modal-backdrop">
             <div class="modal card">
-                <div class="title-lg">Add Supplier</div>
-                <div class="form-grid">
+                <div class="title-lg">Add Offer</div>
+
+                <!-- 基本信息（必填） -->
+                <div class="form-grid compact">
                     <div>
-                        <label>Supplier Name</label>
-                        <input class="input" v-model="supplierModal.form.name" placeholder="Supplier name"/>
+                        <label>Supplier Name <span class="req">*</span></label>
+                        <input class="input" v-model.trim="supplierModal.form.name" placeholder="Supplier name"/>
                     </div>
                     <div>
-                        <label>Contact</label>
-                        <input class="input" v-model="supplierModal.form.contact" placeholder="Contact person / phone"/>
+                        <label>Contact <span class="req">*</span></label>
+                        <input class="input" v-model.trim="supplierModal.form.contact" placeholder="Contact person"/>
                     </div>
                 </div>
-                <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:16px;">
+
+                <!-- 初始报价行 -->
+                <div class="title-sm" style="font-weight:700; margin:12px 0 8px;">Initial Offers</div>
+                <div class="offer-grid header">
+                    <div>Equipment Type</div>
+                    <div>Price</div>
+                    <div>Note</div>
+                    <div></div>
+                </div>
+                <div v-for="(row, idx) in supplierModal.offerRows" :key="idx" class="offer-grid">
+                    <div>
+                        <select class="input" v-model="row.equipmentTypeId">
+                            <option value="" disabled>Select type</option>
+                            <option v-for="t in types" :key="t.id" :value="t.id">{{ t.name }}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <input class="input" type="number" min="0" step="1" v-model.number="row.price" placeholder="0"/>
+                    </div>
+                    <div>
+                        <input class="input" v-model.trim="row.note" placeholder="Optional"/>
+                    </div>
+                    <div class="right">
+                        <button class="btn" @click="removeOfferRow(idx)">Remove</button>
+                    </div>
+                </div>
+                <div class="row-end">
+                    <button class="btn" @click="addOfferRow">Add Offer Row</button>
+                </div>
+
+                <!-- 底部操作 -->
+                <div class="footer-actions">
                     <button class="btn" @click="closeNewSupplier">Cancel</button>
-                    <button class="btn btn-primary" @click="saveNewSupplier">Save</button>
+                    <button class="btn btn-primary" @click="saveNewSupplier" :disabled="savingSupplier">
+                        {{ savingSupplier ? 'Saving...' : 'Save' }}
+                    </button>
                 </div>
             </div>
         </div>
@@ -211,15 +264,14 @@ const filteredRows = computed(() => {
     const max = filters.maxPrice === '' || filters.maxPrice === null ? Infinity : Number(filters.maxPrice)
 
     return allRows.value.filter(r => {
-        const byKw = !kw || [
-            r.supplierName,
-            r.typeName,
-            r.contact
-        ].some(x => (x || '').toLowerCase().includes(kw))
+        const byKw =
+            !kw ||
+            [r.supplierName, r.typeName, r.contact].some(x => (x || '').toLowerCase().includes(kw))
 
         const bySupplier = !filters.supplierIds.length || filters.supplierIds.includes(String(r.supplierId))
         const byType = !filters.typeIds.length || filters.typeIds.includes(String(r.equipmentTypeId))
-        const byPrice = (Number.isFinite(min) ? r.price >= min : true) &&
+        const byPrice =
+            (Number.isFinite(min) ? r.price >= min : true) &&
             (Number.isFinite(max) ? r.price <= max : true)
 
         return byKw && bySupplier && byType && byPrice
@@ -244,60 +296,51 @@ function exportCsv() {
 
 /* ---------- API ---------- */
 async function loadSuppliers() {
-    const r = await fetch('/req/proc/vendors');
+    const r = await fetch('/req/proc/vendors')
     const j = await r.json()
-    suppliers.value = j.code === '000'
-        ? (j.data || []).map(x => ({
-            id: String(x.supplier_id || x.id),
-            name: x.supplier_name || x.name || '-',
-            contact: x.contact || ''
-        }))
-        : []
+    suppliers.value =
+        j.code === '000'
+            ? (j.data || []).map(x => ({
+                id: String(x.supplier_id || x.id),
+                name: x.supplier_name || x.name || '-',
+                contact: x.contact || ''
+            }))
+            : []
 }
 
 async function loadTypes() {
-    const r = await fetch('/req/proc/equipmentTypes');
+    const r = await fetch('/req/proc/equipmentTypes')
     const j = await r.json()
-    types.value = j.code === '000'
-        ? (j.data || []).map(x => ({
-            id: String(x.equipment_type_id || x.id),
-            name: x.equipment_type_name || x.name || '-'
-        }))
-        : []
+    types.value =
+        j.code === '000'
+            ? (j.data || []).map(x => ({
+                id: String(x.equipment_type_id || x.id),
+                name: x.equipment_type_name || x.name || '-'
+            }))
+            : []
 }
 
 async function loadQuotes() {
-    const r = await fetch('/req/proc/quotes');
+    const r = await fetch('/req/proc/quotes')
     const j = await r.json()
-    quotes.value = j.code === '000'
-        ? (j.data || []).map(x => ({
-            supplierId: String(x.supplier_id || x.supplierId),
-            typeId: String(x.equipment_type_id || x.equipmentTypeId),
-            price: Number(x.price || 0)
-        }))
-        : []
+    quotes.value =
+        j.code === '000'
+            ? (j.data || []).map(x => ({
+                supplierId: String(x.supplier_id || x.supplierId),
+                typeId: String(x.equipment_type_id || x.equipmentTypeId),
+                price: Number(x.price || 0)
+            }))
+            : []
 }
 
-/* ---------- Offer modal ---------- */
+/* ---------- Offer edit modal ---------- */
 const offerModal = reactive({
     open: false,
-    mode: 'create',
     form: {supplierId: '', equipmentTypeId: '', price: 0}
 })
 
-function openNewOffer() {
-    offerModal.open = true
-    offerModal.mode = 'create'
-    offerModal.form = {
-        supplierId: suppliers.value[0]?.id || '',
-        equipmentTypeId: types.value[0]?.id || '',
-        price: 0
-    }
-}
-
 function openEditOffer(row) {
     offerModal.open = true
-    offerModal.mode = 'edit'
     offerModal.form = {
         supplierId: row.supplierId,
         equipmentTypeId: row.equipmentTypeId,
@@ -312,11 +355,14 @@ function closeOffer() {
 async function saveOffer() {
     const p = {...offerModal.form}
     if (!p.supplierId || !p.equipmentTypeId) return alert('Supplier & Equipment Type are required')
-    const method = offerModal.mode === 'create' ? 'POST' : 'PUT'
     const r = await fetch('/req/proc/quote', {
-        method,
+        method: 'PUT',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({supplier_id: p.supplierId, equipment_type_id: p.equipmentTypeId, price: p.price})
+        body: JSON.stringify({
+            supplier_id: p.supplierId,
+            equipment_type_id: p.equipmentTypeId,
+            price: Number(p.price || 0)
+        })
     })
     const j = await r.json().catch(() => ({code: 'ERR'}))
     if (j.code !== '000') return alert(j.message || 'Failed to save offer')
@@ -326,21 +372,37 @@ async function saveOffer() {
 
 async function removeOffer(row) {
     if (!confirm(`Delete offer: ${row.supplierName} - ${row.typeName}?`)) return
-    const r = await fetch(`/req/proc/quote?supplierId=${encodeURIComponent(row.supplierId)}&equipmentTypeId=${encodeURIComponent(row.equipmentTypeId)}`, {method: 'DELETE'})
+    const r = await fetch(
+        `/req/proc/quote?supplierId=${encodeURIComponent(row.supplierId)}&equipmentTypeId=${encodeURIComponent(
+            row.equipmentTypeId
+        )}`,
+        {method: 'DELETE'}
+    )
     const j = await r.json().catch(() => ({code: 'ERR'}))
     if (j.code !== '000') return alert(j.message || 'Failed to delete offer')
     await loadQuotes()
 }
 
-/* ---------- Supplier modal ---------- */
+/* ---------- Supplier modal (合并后唯一入口) ---------- */
+const savingSupplier = ref(false)
 const supplierModal = reactive({
     open: false,
-    form: {name: '', contact: ''}
+    form: {name: '', contact: ''},
+    offerRows: [{equipmentTypeId: '', price: 0, note: ''}]
 })
 
+function addOfferRow() {
+    supplierModal.offerRows.push({equipmentTypeId: '', price: 0, note: ''})
+}
+
+function removeOfferRow(idx) {
+    supplierModal.offerRows.splice(idx, 1)
+}
+
 function openNewSupplier() {
-    supplierModal.open = true;
+    supplierModal.open = true
     supplierModal.form = {name: '', contact: ''}
+    supplierModal.offerRows = [{equipmentTypeId: '', price: 0, note: ''}]
 }
 
 function closeNewSupplier() {
@@ -348,17 +410,59 @@ function closeNewSupplier() {
 }
 
 async function saveNewSupplier() {
-    const p = supplierModal.form
-    if (!p.name || !p.name.trim()) return alert('Supplier name is required')
-    const r = await fetch('/req/proc/vendor', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({supplier_name: p.name.trim(), contact: p.contact || ''})
-    })
-    const j = await r.json().catch(() => ({code: 'ERR'}))
-    if (j.code !== '000') return alert(j.message || 'Failed to add supplier')
-    await loadSuppliers()
-    closeNewSupplier()
+    if (!supplierModal.form.name.trim()) return alert('Supplier name is required')
+    if (!supplierModal.form.contact.trim()) return alert('Contact is required')
+
+    savingSupplier.value = true
+    try {
+        // 1) 新建 supplier
+        const r = await fetch('/req/proc/vendor', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                supplier_name: supplierModal.form.name.trim(),
+                contact: supplierModal.form.contact.trim()
+            })
+        })
+        const j = await r.json().catch(() => ({code: 'ERR'}))
+        if (j.code !== '000') return alert(j.message || 'Failed to add supplier')
+
+        // 获取新 supplier_id
+        let newId = String(j?.data?.supplier_id || '')
+        if (!newId) {
+            await loadSuppliers()
+            const found = suppliers.value.find(s => s.name === supplierModal.form.name.trim())
+            if (found) newId = String(found.id)
+        }
+        if (!newId) return alert('Supplier created but ID not returned.')
+
+        // 2) 批量新增报价（过滤未填完整的行）
+        const rows = supplierModal.offerRows
+            .filter(r => r.equipmentTypeId && Number.isFinite(Number(r.price)) && Number(r.price) >= 0)
+            .map(r => ({
+                supplier_id: newId,
+                equipment_type_id: String(r.equipmentTypeId),
+                price: Number(r.price)
+            }))
+
+        for (const payload of rows) {
+            const rr = await fetch('/req/proc/quote', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            })
+            const jj = await rr.json().catch(() => ({code: 'ERR'}))
+            if (jj.code !== '000') throw new Error(jj.message || 'Failed to add offer')
+        }
+
+        await Promise.all([loadSuppliers(), loadQuotes()])
+        closeNewSupplier()
+    } catch (err) {
+        console.error(err)
+        alert(err?.message || 'Save failed')
+    } finally {
+        savingSupplier.value = false
+    }
 }
 
 /* init */
@@ -378,7 +482,8 @@ onMounted(async () => {
     border-collapse: collapse;
 }
 
-.ui-table th, .ui-table td {
+.ui-table th,
+.ui-table td {
     padding: 10px 12px;
     border-bottom: 1px solid #e5e7eb;
     text-align: left;
@@ -406,10 +511,56 @@ onMounted(async () => {
     padding: 16px;
 }
 
+/* 更紧凑的基础信息两列栅格 */
 .form-grid {
     margin-top: 16px;
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 12px;
+}
+
+.form-grid.compact {
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+}
+
+.req {
+    color: #dc2626;
+}
+
+/* 报价行表格式布局 */
+.offer-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr 1.2fr auto;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.offer-grid.header {
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.row-end {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 4px;
+}
+
+/* 底部操作按钮区域右对齐 */
+.footer-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.right {
+    text-align: right;
 }
 </style>

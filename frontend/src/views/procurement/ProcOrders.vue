@@ -76,9 +76,11 @@
                     <td>{{ money(unitPriceOf(o.supplierId, o.equipmentTypeId) * o.count) }}</td>
                     <td>{{ o.status }}</td>
                     <td style="white-space:nowrap;">
-                        <button class="btn" :disabled="o.status==='under-review'" @click="flow(o,'under-review')">Under
-                            Review
+                        <!-- 注释掉 Under Review 按钮（不需要显示/使用）
+                        <button class="btn" :disabled="o.status==='under-review'" @click="flow(o,'under-review')">
+                          Under Review
                         </button>
+                        -->
                         <button class="btn btn-blue" style="margin-left:6px;" :disabled="o.status==='procuring'"
                                 @click="flow(o,'procuring')">Start
                         </button>
