@@ -1,7 +1,8 @@
 <template>
     <div class="card" style="padding:16px;">
         <div class="title-lg">Purchase Orders</div>
-        <div class="subtitle" style="margin-top:8px;">Update order status and push to equipment team for onboarding.
+        <div class="subtitle" style="margin-top:8px;">
+            Update order status and push to equipment team for onboarding.
         </div>
 
         <!-- Filters -->
@@ -76,19 +77,35 @@
                     <td>{{ money(unitPriceOf(o.supplierId, o.equipmentTypeId) * o.count) }}</td>
                     <td>{{ o.status }}</td>
                     <td style="white-space:nowrap;">
-                        <!-- 注释掉 Under Review 按钮（不需要显示/使用）
-                        <button class="btn" :disabled="o.status==='under-review'" @click="flow(o,'under-review')">
-                          Under Review
+                        <!-- Under Review 按钮不需要 -->
+                        <button
+                            class="btn btn-blue"
+                            style="margin-left:6px;"
+                            :disabled="!canStart(o)"
+                            :class="{ nohover: !canStart(o) }"
+                            @click="flow(o, 'procuring')"
+                        >
+                            Start
                         </button>
-                        -->
-                        <button class="btn btn-blue" style="margin-left:6px;" :disabled="o.status==='procuring'"
-                                @click="flow(o,'procuring')">Start
+
+                        <button
+                            class="btn btn-green"
+                            style="margin-left:6px;"
+                            :disabled="!canConfirmArrival(o)"
+                            :class="{ nohover: !canConfirmArrival(o) }"
+                            @click="flow(o, 'arrived')"
+                        >
+                            Confirm Arrival
                         </button>
-                        <button class="btn btn-green" style="margin-left:6px;" :disabled="o.status==='arrived'"
-                                @click="flow(o,'arrived')">Confirm Arrival
-                        </button>
-                        <button class="btn btn-red" style="margin-left:6px;" :disabled="o.status==='terminated'"
-                                @click="flow(o,'terminated')">Terminate
+
+                        <button
+                            class="btn btn-red"
+                            style="margin-left:6px;"
+                            :disabled="!canTerminate(o)"
+                            :class="{ nohover: !canTerminate(o) }"
+                            @click="flow(o, 'terminated')"
+                        >
+                            Terminate
                         </button>
                     </td>
                 </tr>
@@ -98,11 +115,15 @@
 
         <!-- Pagination -->
         <div class="ui-pagination" style="margin-top:12px;">
-            <button class="btn" :disabled="page===1" @click="page=1">First</button>
-            <button class="btn" :disabled="page===1" @click="page--">Prev</button>
+            <button class="btn" :disabled="page===1" :class="{ nohover: page===1 }" @click="page=1">First</button>
+            <button class="btn" :disabled="page===1" :class="{ nohover: page===1 }" @click="page--">Prev</button>
             <span style="color:var(--color-muted);">Page {{ page }} / {{ totalPages }}</span>
-            <button class="btn" :disabled="page===totalPages" @click="page++">Next</button>
-            <button class="btn" :disabled="page===totalPages" @click="page=totalPages">Last</button>
+            <button class="btn" :disabled="page===totalPages" :class="{ nohover: page===totalPages }" @click="page++">
+                Next
+            </button>
+            <button class="btn" :disabled="page===totalPages" :class="{ nohover: page===totalPages }"
+                    @click="page=totalPages">Last
+            </button>
             <select class="input" style="width:auto;" v-model.number="pageSize">
                 <option :value="5">5</option>
                 <option :value="10">10</option>
@@ -167,6 +188,37 @@ function unitPriceOf(supplierId, typeId) {
     return q ? Number(q.price || 0) : 0
 }
 
+/** ---------- 按钮可用性规则 ---------- */
+/**
+ * - arrived：全部不能操作
+ * - terminated：全部不能操作
+ * - under-review：有 vendor -> 只能 Start / Terminate；没有 vendor -> 只能 Terminate
+ * - procuring：可以 Confirm Arrival / Terminate，不能 Start
+ */
+function hasVendor(o) {
+    const sid = String(o.supplierId || '')
+    return !!sid && sid !== '0000'
+}
+
+function canStart(o) {
+    if (o.status === 'arrived' || o.status === 'terminated') return false
+    if (o.status === 'procuring') return false
+    if (o.status === 'under-review') return hasVendor(o) // 有 vendor 才能 start
+    return false
+}
+
+function canConfirmArrival(o) {
+    if (o.status === 'arrived' || o.status === 'terminated') return false
+    // under-review 不允许 Confirm Arrival；procuring 才能
+    return o.status === 'procuring'
+}
+
+function canTerminate(o) {
+    if (o.status === 'arrived' || o.status === 'terminated') return false
+    // 其余状态均可终止
+    return o.status === 'under-review' || o.status === 'procuring'
+}
+
 function resetFilters() {
     filters.keyword = ''
     filters.statuses = []
@@ -222,7 +274,7 @@ async function loadOrders() {
             procureId: Number(x.procure_id || x.procureId),
             equipmentTypeId: String(x.equipment_type_id || x.equipmentTypeId),
             count: Number(x.count || 0),
-            supplierId: String(x.supplier_id || x.supplierId),
+            supplierId: String(x.supplier_id || x.supplierId || ''), // 可能为空或'0000'
             status: String(x.status || 'under-review'),
         }))
         : []
@@ -259,7 +311,7 @@ async function loadQuotes() {
         : []
 }
 
-/* 状态流转 */
+/* 状态流转（仅在前述可用性判断为 true 时才会触发） */
 async function flow(o, toStatus) {
     if (o.status === toStatus) return
     const r = await fetch('/req/proc/order/status', {
@@ -299,5 +351,11 @@ onMounted(async () => {
 .ui-table th {
     background: #f9fafb;
     font-weight: 700;
+}
+
+/* 禁用按钮去掉 hover/指针效果 */
+.btn.nohover {
+    pointer-events: none;
+    opacity: .6;
 }
 </style>
