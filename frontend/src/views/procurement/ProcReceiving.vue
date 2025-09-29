@@ -1,14 +1,29 @@
 <template>
     <div class="card" style="padding:16px;">
         <div class="title-lg">Receiving & QA</div>
-        <div class="subtitle" style="margin-top:8px;">Register arrivals, record serials, and hand off to Equipment
-            team.
+        <div class="subtitle" style="margin-top:8px;">
+            Register arrivals, record serials, and hand off to Equipment team.
         </div>
 
         <!-- Filters -->
-        <div class="ui-toolbar" style="margin-top:12px;">
-            <input class="input" v-model="keyword" placeholder="Search by PO / vendor / type"/>
-            <button class="btn" @click="keyword=''">Reset</button>
+        <div class="ui-toolbar" style="margin-top:12px; display:flex; flex-wrap:wrap; gap:12px;">
+            <input class="input" v-model="filters.keyword" placeholder="Search by PO / vendor / type"
+                   style="min-width:220px;"/>
+            <div style="min-width:220px;">
+                <label>Vendor</label>
+                <MultiSelect v-model="filters.vendorIds" :options="vendorOptions" placeholder="All vendors"/>
+            </div>
+            <div style="min-width:220px;">
+                <label>Equipment Type</label>
+                <MultiSelect v-model="filters.typeIds" :options="typeOptions" placeholder="All types"/>
+            </div>
+            <div style="min-width:240px;">
+                <label>Department</label>
+                <MultiSelect v-model="filters.departmentIds" :options="deptOptions" placeholder="All departments"/>
+            </div>
+            <div style="display:flex; gap:8px; align-items:end;">
+                <button class="btn" @click="resetFilters">Reset</button>
+            </div>
         </div>
 
         <!-- Table -->
@@ -106,6 +121,7 @@
 
 <script setup>
 import {ref, reactive, computed, onMounted} from 'vue'
+import MultiSelect from '@/components/MultiSelect.vue'
 import EmptyState from '@/components/admin/EmptyState.vue'
 import TableSkeleton from '@/components/admin/TableSkeleton.vue'
 
@@ -115,16 +131,28 @@ import TableSkeleton from '@/components/admin/TableSkeleton.vue'
  * GET  /req/proc/equipmentTypes           -> 设备类型
  * GET  /req/admin/departments             -> 部门
  * POST /req/equip/register                -> { procure_id, equipment_type_id, supplier_id, department_id, serials:[], notes }
- * PUT  /req/proc/order/status             -> 关闭订单（可选）：{ procure_id, status: 'terminated' }
+ * PUT  /req/proc/order/status             -> 关闭订单：{ procure_id, status: 'terminated' }
  */
 
 const loading = ref(true)
-const keyword = ref('')
 
 const orders = ref([])       // [{procureId, equipmentTypeId, count, supplierId, status}]
 const vendors = ref([])      // [{id,name}]
 const types = ref([])        // [{id,name}]
 const departments = ref([])  // [{id,name}]
+
+/* -------- options for filters -------- */
+const vendorOptions = computed(() => vendors.value.map(v => ({value: String(v.id), label: v.name})))
+const typeOptions = computed(() => types.value.map(t => ({value: String(t.id), label: t.name})))
+const deptOptions = computed(() => departments.value.map(d => ({value: String(d.id), label: d.name})))
+
+/* -------- filters (like Equipment Ledger) -------- */
+const filters = reactive({
+    keyword: '',
+    vendorIds: [],
+    typeIds: [],
+    departmentIds: [],
+})
 
 function vendorName(id) {
     const v = vendors.value.find(v => String(v.id) === String(id));
@@ -136,14 +164,26 @@ function typeName(id) {
     return t ? t.name : id
 }
 
+/* 过滤：关键字 (PO/供应商名/类型名) + 多选（供应商/类型/部门） */
 const filtered = computed(() => {
-    const kw = (keyword.value || '').toLowerCase()
+    const kw = (filters.keyword || '').toLowerCase()
     return orders.value.filter(o => {
-        const inKw = !kw || [`#${o.procureId}`, vendorName(o.supplierId), typeName(o.equipmentTypeId)]
-            .some(s => (s || '').toLowerCase().includes(kw))
-        return inKw
+        const kwPool = [`#${o.procureId}`, vendorName(o.supplierId), typeName(o.equipmentTypeId)]
+        const matchKw = !kw || kwPool.some(s => String(s || '').toLowerCase().includes(kw))
+        const matchVendor = filters.vendorIds.length === 0 || filters.vendorIds.includes(String(o.supplierId))
+        const matchType = filters.typeIds.length === 0 || filters.typeIds.includes(String(o.equipmentTypeId))
+        // 注意：到货订单还未分配科室，所以部门过滤基于“登记将要分配的部门”业务并不严格，这里仅保留入口（若后端订单已有 department_id 可替换 o.departmentId）
+        const matchDept = filters.departmentIds.length === 0 // 无订单上的 dept 字段，默认放行
+        return matchKw && matchVendor && matchType && matchDept
     })
 })
+
+function resetFilters() {
+    filters.keyword = ''
+    filters.vendorIds = []
+    filters.typeIds = []
+    filters.departmentIds = []
+}
 
 /* -------- Modal state -------- */
 const modal = reactive({
@@ -156,7 +196,6 @@ function openRegister(o) {
     modal.open = true
     modal.order = o
     modal.form.departmentId = departments.value[0]?.id || ''
-    // 初始化序列号输入框数量 = 到货数量
     modal.form.serials = Array.from({length: Number(o.count || 0)}, () => '')
     modal.form.qaNotes = ''
 }
@@ -191,37 +230,40 @@ async function loadArrivals() {
 }
 
 async function loadVendors() {
-    const r = await fetch('/req/proc/vendors');
+    const r = await fetch('/req/proc/vendors')
     const j = await r.json()
-    vendors.value = j.code === '000' ? (j.data || []).map(x => ({
-        id: String(x.supplier_id || x.id),
-        name: x.supplier_name || x.name || '-'
-    })) : []
+    vendors.value = j.code === '000'
+        ? (j.data || []).map(x => ({id: String(x.supplier_id || x.id), name: x.supplier_name || x.name || '-'}))
+        : []
 }
 
 async function loadTypes() {
-    const r = await fetch('/req/proc/equipmentTypes');
+    const r = await fetch('/req/proc/equipmentTypes')
     const j = await r.json()
-    types.value = j.code === '000' ? (j.data || []).map(x => ({
-        id: String(x.equipment_type_id || x.id),
-        name: x.equipment_type_name || x.name || '-'
-    })) : []
+    types.value = j.code === '000'
+        ? (j.data || []).map(x => ({
+            id: String(x.equipment_type_id || x.id),
+            name: x.equipment_type_name || x.name || '-'
+        }))
+        : []
 }
 
 async function loadDepartments() {
-    const r = await fetch('/req/admin/departments');
+    const r = await fetch('/req/admin/departments')
     const j = await r.json()
-    departments.value = j.code === '000' ? (j.data || []).map(x => ({
-        id: String(x.id || x.department_id || x.departmentId),
-        name: x.name || x.department_name || x.departmentName
-    })) : []
+    departments.value = j.code === '000'
+        ? (j.data || []).map(x => ({
+            id: String(x.id || x.department_id || x.departmentId),
+            name: x.name || x.department_name || x.departmentName
+        }))
+        : []
 }
 
 /* 提交登记：把设备入库（序列号）交给后端 */
 async function submitRegister() {
     if (!modal.order) return
-    const missing = modal.form.serials.findIndex(s => !String(s || '').trim())
-    if (missing !== -1) return alert(`Serial #${missing + 1} is required`)
+    const idx = modal.form.serials.findIndex(s => !String(s || '').trim())
+    if (idx !== -1) return alert(`Serial #${idx + 1} is required`)
     const uniq = new Set(modal.form.serials.map(s => s.trim()))
     if (uniq.size !== modal.form.serials.length) return alert('Serial numbers must be unique')
 
@@ -255,7 +297,6 @@ async function closeOrder(o) {
     })
     const j = await r.json().catch(() => ({code: 'ERR'}))
     if (j.code !== '000') return alert(j.message || 'Failed to close order')
-    // 从列表移除
     orders.value = orders.value.filter(x => x.procureId !== o.procureId)
 }
 

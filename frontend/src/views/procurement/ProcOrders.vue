@@ -5,18 +5,45 @@
         </div>
 
         <!-- Filters -->
-        <div class="ui-toolbar" style="margin-top:12px;">
-            <input class="input" v-model="filters.keyword" placeholder="Search by PO / vendor / type"/>
-            <div>
+        <div class="ui-toolbar" style="margin-top:12px; display:flex; flex-wrap:wrap; gap:12px;">
+            <input class="input" v-model="filters.keyword" placeholder="Search by PO / vendor / type"
+                   style="min-width:220px;"/>
+
+            <div style="min-width:220px;">
                 <label>Status</label>
-                <select class="input" v-model="filters.status">
-                    <option value="">All</option>
-                    <option v-for="s in STATUSES" :key="s" :value="s">{{ s }}</option>
-                </select>
+                <MultiSelect v-model="filters.statuses" :options="statusOptions" placeholder="All status"/>
             </div>
-            <button class="btn" @click="resetFilters">Reset</button>
+
+            <div style="min-width:220px;">
+                <label>Vendor</label>
+                <MultiSelect v-model="filters.vendorIds" :options="vendorOptions" placeholder="All vendors"/>
+            </div>
+
+            <div style="min-width:220px;">
+                <label>Equipment Type</label>
+                <MultiSelect v-model="filters.typeIds" :options="typeOptions" placeholder="All types"/>
+            </div>
+
+            <div style="display:flex; gap:8px; align-items:end;">
+                <input class="input" type="number" v-model.number="filters.qtyMin" placeholder="Qty ≥"
+                       style="width:120px;"/>
+                <input class="input" type="number" v-model.number="filters.qtyMax" placeholder="Qty ≤"
+                       style="width:120px;"/>
+            </div>
+
+            <div style="display:flex; gap:8px; align-items:end;">
+                <input class="input" type="number" v-model.number="filters.amountMin" placeholder="Amount ≥ $"
+                       style="width:140px;"/>
+                <input class="input" type="number" v-model.number="filters.amountMax" placeholder="Amount ≤ $"
+                       style="width:140px;"/>
+            </div>
+
+            <div style="display:flex; gap:8px; align-items:end;">
+                <button class="btn" @click="resetFilters">Reset</button>
+            </div>
         </div>
 
+        <!-- Table -->
         <div class="table-wrapper" style="margin-top:16px; overflow:auto;">
             <table class="ui-table" style="table-layout:auto; width:100%;">
                 <thead>
@@ -85,6 +112,7 @@
 
 <script setup>
 import {ref, reactive, computed, onMounted, watch} from 'vue'
+import MultiSelect from '@/components/MultiSelect.vue'
 import TableSkeleton from '@/components/admin/TableSkeleton.vue'
 
 /** 与后端一致的状态值 */
@@ -96,9 +124,22 @@ const vendors = ref([])    // [{id,name}]
 const types = ref([])      // [{id,name}]
 const quotes = ref([])     // [{supplierId,typeId,price}]
 
-const filters = reactive({keyword: '', status: ''})
-const page = ref(1)
-const pageSize = ref(10)
+/* ---------- filters ---------- */
+const filters = reactive({
+    keyword: '',
+    statuses: [],         // 支持多选
+    vendorIds: [],
+    typeIds: [],
+    qtyMin: undefined,
+    qtyMax: undefined,
+    amountMin: undefined,
+    amountMax: undefined,
+})
+
+/* ---------- options ---------- */
+const statusOptions = computed(() => STATUSES.map(s => ({value: s, label: s})))
+const vendorOptions = computed(() => vendors.value.map(v => ({value: String(v.id), label: v.name})))
+const typeOptions = computed(() => types.value.map(t => ({value: String(t.id), label: t.name})))
 
 /* ------- helpers ------- */
 function money(n) {
@@ -125,20 +166,42 @@ function unitPriceOf(supplierId, typeId) {
 }
 
 function resetFilters() {
-    filters.keyword = '';
-    filters.status = ''
+    filters.keyword = ''
+    filters.statuses = []
+    filters.vendorIds = []
+    filters.typeIds = []
+    filters.qtyMin = undefined
+    filters.qtyMax = undefined
+    filters.amountMin = undefined
+    filters.amountMax = undefined
 }
 
 /* ------- computed & pagination ------- */
 const filtered = computed(() => {
     const kw = (filters.keyword || '').toLowerCase()
+    const qmin = typeof filters.qtyMin === 'number' ? filters.qtyMin : -Infinity
+    const qmax = typeof filters.qtyMax === 'number' ? filters.qtyMax : Infinity
+    const amin = typeof filters.amountMin === 'number' ? filters.amountMin : -Infinity
+    const amax = typeof filters.amountMax === 'number' ? filters.amountMax : Infinity
+
     return orders.value.filter(o => {
+        const up = unitPriceOf(o.supplierId, o.equipmentTypeId)
+        const amt = up * (o.count || 0)
+
         const hitKw = !kw || [`#${o.procureId}`, vendorName(o.supplierId), typeName(o.equipmentTypeId)]
             .some(s => (s || '').toLowerCase().includes(kw))
-        const hitStatus = !filters.status || o.status === filters.status
-        return hitKw && hitStatus
+        const hitStatus = filters.statuses.length === 0 || filters.statuses.includes(o.status)
+        const hitVendor = filters.vendorIds.length === 0 || filters.vendorIds.includes(String(o.supplierId))
+        const hitType = filters.typeIds.length === 0 || filters.typeIds.includes(String(o.equipmentTypeId))
+        const hitQty = (o.count || 0) >= qmin && (o.count || 0) <= qmax
+        const hitAmt = amt >= amin && amt <= amax
+
+        return hitKw && hitStatus && hitVendor && hitType && hitQty && hitAmt
     })
 })
+
+const page = ref(1)
+const pageSize = ref(10)
 const totalPages = computed(() => Math.max(1, Math.ceil(filtered.value.length / pageSize.value)))
 watch([filtered, pageSize], () => {
     if (page.value > totalPages.value) page.value = totalPages.value
@@ -194,6 +257,7 @@ async function loadQuotes() {
         : []
 }
 
+/* 状态流转 */
 async function flow(o, toStatus) {
     if (o.status === toStatus) return
     const r = await fetch('/req/proc/order/status', {

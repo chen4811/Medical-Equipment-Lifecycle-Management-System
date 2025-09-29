@@ -5,11 +5,43 @@
             Manage suppliers and their offers (equipment type ↔ price).
         </div>
 
-        <!-- Toolbar -->
-        <div class="ui-toolbar" style="margin-top:12px;">
-            <input class="input" v-model="keyword" placeholder="Search by supplier / type"/>
-            <div style="display:flex; gap:8px;">
-                <button class="btn" @click="keyword=''">Reset</button>
+        <!-- Filters -->
+        <div class="ui-toolbar" style="margin-top:12px; display:flex; flex-wrap:wrap; gap:12px;">
+            <input class="input" v-model="filters.keyword" placeholder="Search by supplier / type / contact"
+                   style="min-width:220px;"/>
+
+            <div style="min-width:220px;">
+                <label>Supplier</label>
+                <MultiSelect
+                    v-model="filters.supplierIds"
+                    :options="supplierOptions"
+                    placeholder="All suppliers"/>
+            </div>
+
+            <div style="min-width:220px;">
+                <label>Equipment Type</label>
+                <MultiSelect
+                    v-model="filters.typeIds"
+                    :options="typeOptions"
+                    placeholder="All types"/>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; min-width:260px;">
+                <div>
+                    <label>Min Price</label>
+                    <input class="input" type="number" min="0" step="1" v-model.number="filters.minPrice"
+                           placeholder="0"/>
+                </div>
+                <div>
+                    <label>Max Price</label>
+                    <input class="input" type="number" min="0" step="1" v-model.number="filters.maxPrice"
+                           placeholder="Any"/>
+                </div>
+            </div>
+
+            <div style="display:flex; gap:8px; align-items:end;">
+                <button class="btn" @click="resetFilters">Reset</button>
+                <button class="btn" @click="exportCsv">Export CSV</button>
                 <button class="btn btn-primary" @click="openNewOffer">Add Offer</button>
                 <button class="btn" @click="openNewSupplier">Add Supplier</button>
             </div>
@@ -33,12 +65,12 @@
                         <TableSkeleton :rows="6"/>
                     </td>
                 </tr>
-                <tr v-else-if="rows.length===0">
+                <tr v-else-if="filteredRows.length===0">
                     <td colspan="5">
-                        <EmptyState title="No vendors" hint="Add a supplier or offer to get started."/>
+                        <EmptyState title="No vendors" hint="Try filters or add an offer/supplier."/>
                     </td>
                 </tr>
-                <tr v-else v-for="r in rows" :key="r.key">
+                <tr v-else v-for="r in filteredRows" :key="r.key">
                     <td>{{ r.supplierName }}</td>
                     <td>{{ r.contact || '-' }}</td>
                     <td>{{ r.typeName }}</td>
@@ -109,24 +141,44 @@
 import {ref, reactive, computed, onMounted} from 'vue'
 import EmptyState from '@/components/admin/EmptyState.vue'
 import TableSkeleton from '@/components/admin/TableSkeleton.vue'
+import MultiSelect from '@/components/MultiSelect.vue'
 
-/** 后端接口（与项目其余页面一致）：
- *  GET  /req/proc/vendors                    -> [{supplier_id,supplier_name,contact}]
- *  POST /req/proc/vendor                     -> {supplier_name, contact}
- *  GET  /req/proc/equipmentTypes             -> [{equipment_type_id,equipment_type_name}]
- *  GET  /req/proc/quotes                     -> [{supplier_id,equipment_type_id,price}]
- *  POST /req/proc/quote                      -> {supplier_id,equipment_type_id,price}
- *  PUT  /req/proc/quote                      -> {supplier_id,equipment_type_id,price}
+/** APIs:
+ *  GET  /req/proc/vendors
+ *  POST /req/proc/vendor
+ *  GET  /req/proc/equipmentTypes
+ *  GET  /req/proc/quotes
+ *  POST /req/proc/quote
+ *  PUT  /req/proc/quote
  *  DELETE /req/proc/quote?supplierId=&equipmentTypeId=
  */
 
 const loading = ref(true)
-const keyword = ref('')
-
 const suppliers = ref([]) // [{id,name,contact}]
 const types = ref([])     // [{id,name}]
 const quotes = ref([])    // [{supplierId,typeId,price}]
 
+/* ---------- Filters ---------- */
+const filters = reactive({
+    keyword: '',
+    supplierIds: [],
+    typeIds: [],
+    minPrice: '',
+    maxPrice: ''
+})
+
+const supplierOptions = computed(() => suppliers.value.map(s => ({value: String(s.id), label: s.name})))
+const typeOptions = computed(() => types.value.map(t => ({value: String(t.id), label: t.name})))
+
+function resetFilters() {
+    filters.keyword = ''
+    filters.supplierIds = []
+    filters.typeIds = []
+    filters.minPrice = ''
+    filters.maxPrice = ''
+}
+
+/* ---------- Helpers ---------- */
 function money(n) {
     try {
         return Number(n || 0).toLocaleString(undefined, {style: 'currency', currency: 'USD'})
@@ -135,36 +187,60 @@ function money(n) {
     }
 }
 
-function sName(id) {
-    return suppliers.value.find(s => s.id === id)?.name || id
-}
+const sName = id => suppliers.value.find(s => String(s.id) === String(id))?.name || id
+const sContact = id => suppliers.value.find(s => String(s.id) === String(id))?.contact || ''
+const tName = id => types.value.find(t => String(t.id) === String(id))?.name || id
 
-function sContact(id) {
-    return suppliers.value.find(s => s.id === id)?.contact || ''
-}
+/* 扁平数据（全部） */
+const allRows = computed(() =>
+    quotes.value.map(q => ({
+        key: `${q.supplierId}-${q.typeId}`,
+        supplierId: String(q.supplierId),
+        supplierName: sName(q.supplierId),
+        contact: sContact(q.supplierId),
+        equipmentTypeId: String(q.typeId),
+        typeName: tName(q.typeId),
+        price: Number(q.price || 0)
+    }))
+)
 
-function tName(id) {
-    return types.value.find(t => t.id === id)?.name || id
-}
+/* 过滤后的数据 */
+const filteredRows = computed(() => {
+    const kw = (filters.keyword || '').toLowerCase().trim()
+    const min = filters.minPrice === '' || filters.minPrice === null ? -Infinity : Number(filters.minPrice)
+    const max = filters.maxPrice === '' || filters.maxPrice === null ? Infinity : Number(filters.maxPrice)
 
-/* 展示为扁平行 */
-const rows = computed(() => {
-    const kw = (keyword.value || '').toLowerCase()
-    return quotes.value
-        .map(q => ({
-            key: `${q.supplierId}-${q.typeId}`,
-            supplierId: q.supplierId,
-            supplierName: sName(q.supplierId),
-            contact: sContact(q.supplierId),
-            equipmentTypeId: q.typeId,
-            typeName: tName(q.typeId),
-            price: q.price
-        }))
-        .filter(r => {
-            if (!kw) return true
-            return [r.supplierName, r.typeName].some(x => (x || '').toLowerCase().includes(kw))
-        })
+    return allRows.value.filter(r => {
+        const byKw = !kw || [
+            r.supplierName,
+            r.typeName,
+            r.contact
+        ].some(x => (x || '').toLowerCase().includes(kw))
+
+        const bySupplier = !filters.supplierIds.length || filters.supplierIds.includes(String(r.supplierId))
+        const byType = !filters.typeIds.length || filters.typeIds.includes(String(r.equipmentTypeId))
+        const byPrice = (Number.isFinite(min) ? r.price >= min : true) &&
+            (Number.isFinite(max) ? r.price <= max : true)
+
+        return byKw && bySupplier && byType && byPrice
+    })
 })
+
+/* ---------- Export ---------- */
+function exportCsv() {
+    const rows = [
+        ['Supplier', 'Contact', 'Equipment Type', 'Price'],
+        ...filteredRows.value.map(r => [r.supplierName, r.contact, r.typeName, r.price])
+    ]
+    const csv = rows.map(r => r.map(x => `"${String(x ?? '').replaceAll('"', '""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'})
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'vendor-offers.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+}
 
 /* ---------- API ---------- */
 async function loadSuppliers() {
@@ -205,7 +281,7 @@ async function loadQuotes() {
 /* ---------- Offer modal ---------- */
 const offerModal = reactive({
     open: false,
-    mode: 'create', // 'create' | 'edit'
+    mode: 'create',
     form: {supplierId: '', equipmentTypeId: '', price: 0}
 })
 

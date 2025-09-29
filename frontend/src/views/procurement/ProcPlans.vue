@@ -6,9 +6,42 @@
         </div>
 
         <!-- Filters -->
-        <div class="ui-toolbar" style="margin-top:12px;">
-            <input class="input" v-model="keyword" placeholder="Search by ID / type / supplier"/>
-            <button class="btn" @click="keyword=''">Reset</button>
+        <div class="ui-toolbar" style="margin-top:12px; display:flex; flex-wrap:wrap; gap:12px;">
+            <input class="input" v-model="filters.keyword" placeholder="Search by ID / type / supplier"
+                   style="min-width:220px;"/>
+
+            <div style="min-width:220px;">
+                <label>Supplier</label>
+                <MultiSelect v-model="filters.vendorIds" :options="supplierOptions" placeholder="All suppliers"/>
+            </div>
+
+            <div style="min-width:220px;">
+                <label>Equipment Type</label>
+                <MultiSelect v-model="filters.typeIds" :options="typeOptions" placeholder="All types"/>
+            </div>
+
+            <div style="min-width:220px;">
+                <label>Status</label>
+                <MultiSelect v-model="filters.statuses" :options="statusOptions" placeholder="All status"/>
+            </div>
+
+            <div style="display:flex; gap:8px; align-items:end;">
+                <input class="input" type="number" v-model.number="filters.qtyMin" placeholder="Qty ≥"
+                       style="width:120px;"/>
+                <input class="input" type="number" v-model.number="filters.qtyMax" placeholder="Qty ≤"
+                       style="width:120px;"/>
+            </div>
+
+            <div style="display:flex; gap:8px; align-items:end;">
+                <input class="input" type="number" v-model.number="filters.amountMin" placeholder="Amount ≥ $"
+                       style="width:140px;"/>
+                <input class="input" type="number" v-model.number="filters.amountMax" placeholder="Amount ≤ $"
+                       style="width:140px;"/>
+            </div>
+
+            <div style="display:flex; gap:8px; align-items:end;">
+                <button class="btn" @click="resetFilters">Reset</button>
+            </div>
         </div>
 
         <div class="table-wrapper" style="margin-top:16px; overflow:auto;">
@@ -100,26 +133,27 @@
 
 <script setup>
 import {ref, reactive, computed, onMounted} from 'vue'
+import MultiSelect from '@/components/MultiSelect.vue'
 import TableSkeleton from '@/components/admin/TableSkeleton.vue'
 
 /**
  * 约定后端接口：
- *  - GET  /req/proc/orders            -> 全量订单；本页取 status='under-review' 视为“请购单”
+ *  - GET  /req/proc/orders            -> 全量订单；本页默认取 status='under-review' 视为“请购单”
  *  - PUT  /req/proc/order/status      -> {procure_id, status} 变更状态（用于 Reject）
- *  - PUT  /req/proc/order/assign      -> {procure_id, supplier_id, count} 指派供应商并更新数量（需要在后端新增）
+ *  - PUT  /req/proc/order/assign      -> {procure_id, supplier_id, count} 指派供应商并更新数量
  *  - GET  /req/proc/vendors           -> 供应商
  *  - GET  /req/proc/equipmentTypes    -> 设备类型（用于名称展示）
  *  - GET  /req/proc/quotes            -> 单价（supplier_id + equipment_type_id -> price）
  */
 
 const loading = ref(true)
-const keyword = ref('')
 
 const suppliers = ref([])  // [{id,name}]
 const types = ref([])      // [{id,name}]
 const quotes = ref([])     // [{supplierId,typeId,price}]
-const requests = ref([])   // 仅拉取 status='under-review' 的订单作为请购单
+const requests = ref([])   // 订单（默认展示 under-review）
 
+/* ---------- helpers ---------- */
 function money(n) {
     try {
         return Number(n || 0).toLocaleString(undefined, {style: 'currency', currency: 'USD'})
@@ -143,58 +177,113 @@ function unitPriceOf(supplierId, typeId) {
     return q ? Number(q.price || 0) : 0
 }
 
+/* ---------- filter options ---------- */
+const supplierOptions = computed(() => suppliers.value.map(v => ({value: String(v.id), label: v.name})))
+const typeOptions = computed(() => types.value.map(t => ({value: String(t.id), label: t.name})))
+const statusOptions = computed(() => [
+    {value: 'under-review', label: 'Under Review'},
+    {value: 'procuring', label: 'Procuring'},
+    {value: 'arrived', label: 'Arrived'},
+    {value: 'terminated', label: 'Terminated'},
+])
+
+/* ---------- filters ---------- */
+const filters = reactive({
+    keyword: '',
+    vendorIds: [],
+    typeIds: [],
+    statuses: ['under-review'], // 默认只看请购
+    qtyMin: undefined,
+    qtyMax: undefined,
+    amountMin: undefined,
+    amountMax: undefined,
+})
+
+function resetFilters() {
+    filters.keyword = ''
+    filters.vendorIds = []
+    filters.typeIds = []
+    filters.statuses = ['under-review']
+    filters.qtyMin = undefined
+    filters.qtyMax = undefined
+    filters.amountMin = undefined
+    filters.amountMax = undefined
+}
+
+/* ---------- data -> filtered ---------- */
 const filtered = computed(() => {
-    const kw = (keyword.value || '').toLowerCase()
+    const kw = (filters.keyword || '').toLowerCase()
+    const qmin = typeof filters.qtyMin === 'number' ? filters.qtyMin : -Infinity
+    const qmax = typeof filters.qtyMax === 'number' ? filters.qtyMax : Infinity
+    const amin = typeof filters.amountMin === 'number' ? filters.amountMin : -Infinity
+    const amax = typeof filters.amountMax === 'number' ? filters.amountMax : Infinity
+
     return requests.value.filter(p => {
-        if (!kw) return true
-        return [`#${p.procureId}`, supplierName(p.supplierId), typeName(p.equipmentTypeId)]
+        const up = unitPriceOf(p.supplierId, p.equipmentTypeId)
+        const amt = up * (p.count || 0)
+
+        const matchKw = !kw || [`#${p.procureId}`, supplierName(p.supplierId), typeName(p.equipmentTypeId)]
             .some(s => (s || '').toLowerCase().includes(kw))
+
+        const matchVendor = filters.vendorIds.length === 0 || filters.vendorIds.includes(String(p.supplierId))
+        const matchType = filters.typeIds.length === 0 || filters.typeIds.includes(String(p.equipmentTypeId))
+        const matchStatus = filters.statuses.length === 0 || filters.statuses.includes(String(p.status))
+
+        const matchQty = (p.count || 0) >= qmin && (p.count || 0) <= qmax
+        const matchAmt = amt >= amin && amt <= amax
+
+        return matchKw && matchVendor && matchType && matchStatus && matchQty && matchAmt
     })
 })
 
-/* -------- APIs -------- */
+/* ---------- APIs ---------- */
 async function loadVendors() {
-    const r = await fetch('/req/proc/vendors');
-    const j = await r.json();
-    suppliers.value = j.code === '000' ? (j.data || []).map(x => ({
-        id: String(x.supplier_id || x.id),
-        name: x.supplier_name || x.name || '-'
-    })) : []
+    const r = await fetch('/req/proc/vendors')
+    const j = await r.json()
+    suppliers.value = j.code === '000'
+        ? (j.data || []).map(x => ({id: String(x.supplier_id || x.id), name: x.supplier_name || x.name || '-'}))
+        : []
 }
 
 async function loadTypes() {
-    const r = await fetch('/req/proc/equipmentTypes');
-    const j = await r.json();
-    types.value = j.code === '000' ? (j.data || []).map(x => ({
-        id: String(x.equipment_type_id || x.id),
-        name: x.equipment_type_name || x.name || '-'
-    })) : []
+    const r = await fetch('/req/proc/equipmentTypes')
+    const j = await r.json()
+    types.value = j.code === '000'
+        ? (j.data || []).map(x => ({
+            id: String(x.equipment_type_id || x.id),
+            name: x.equipment_type_name || x.name || '-'
+        }))
+        : []
 }
 
 async function loadQuotes() {
-    const r = await fetch('/req/proc/quotes');
-    const j = await r.json();
-    quotes.value = j.code === '000' ? (j.data || []).map(x => ({
-        supplierId: String(x.supplier_id || x.supplierId),
-        typeId: String(x.equipment_type_id || x.equipmentTypeId),
-        price: Number(x.price || 0)
-    })) : []
+    const r = await fetch('/req/proc/quotes')
+    const j = await r.json()
+    quotes.value = j.code === '000'
+        ? (j.data || []).map(x => ({
+            supplierId: String(x.supplier_id || x.supplierId),
+            typeId: String(x.equipment_type_id || x.equipmentTypeId),
+            price: Number(x.price || 0)
+        }))
+        : []
 }
 
 async function loadRequests() {
-    const r = await fetch('/req/proc/orders');
+    const r = await fetch('/req/proc/orders')
     const j = await r.json()
-    const all = j.code === '000' ? (j.data || []).map(x => ({
-        procureId: Number(x.procure_id || x.procureId),
-        equipmentTypeId: String(x.equipment_type_id || x.equipmentTypeId),
-        count: Number(x.count || 0),
-        supplierId: String(x.supplier_id || x.supplierId || '0000'),
-        status: String(x.status || 'under-review'),
-    })) : []
-    requests.value = all.filter(x => x.status === 'under-review')
+    const all = j.code === '000'
+        ? (j.data || []).map(x => ({
+            procureId: Number(x.procure_id || x.procureId),
+            equipmentTypeId: String(x.equipment_type_id || x.equipmentTypeId),
+            count: Number(x.count || 0),
+            supplierId: String(x.supplier_id || x.supplierId || '0000'),
+            status: String(x.status || 'under-review'),
+        }))
+        : []
+    requests.value = all // 交给 filters.statuses 控制是否只看 under-review
 }
 
-/* Reject -> status = terminated */
+/* ---------- actions ---------- */
 async function reject(p) {
     const r = await fetch('/req/proc/order/status', {
         method: 'PUT',
@@ -203,10 +292,10 @@ async function reject(p) {
     })
     const j = await r.json().catch(() => ({code: 'ERR'}))
     if (j.code !== '000') return alert(j.message || 'Failed to reject')
+    // 从当前视图移除（或刷新）
     requests.value = requests.value.filter(x => x.procureId !== p.procureId)
 }
 
-/* Assign vendor modal */
 const modal = reactive({open: false, req: null, form: {supplierId: '', count: 1}})
 
 function openAssign(p) {
@@ -221,7 +310,6 @@ function closeAssign() {
 }
 
 async function createPO() {
-    // 指派供应商并更新数量（需要后端提供 /req/proc/order/assign）
     const body = {procure_id: modal.req.procureId, supplier_id: modal.form.supplierId, count: modal.form.count}
     const r = await fetch('/req/proc/order/assign', {
         method: 'PUT',
@@ -231,15 +319,14 @@ async function createPO() {
     const j = await r.json().catch(() => ({code: 'ERR'}))
     if (j.code !== '000') return alert(j.message || 'Failed to assign vendor')
 
-    // 成功后把状态推进到 procuring
     const r2 = await fetch('/req/proc/order/status', {
-        method: 'PUT', headers: {'Content-Type': 'application/json'},
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({procure_id: modal.req.procureId, status: 'procuring'})
     })
     const j2 = await r2.json().catch(() => ({code: 'ERR'}))
     if (j2.code !== '000') return alert(j2.message || 'Failed to move status')
 
-    // 从“请求列表”移除
     requests.value = requests.value.filter(x => x.procureId !== modal.req.procureId)
     closeAssign()
 }
