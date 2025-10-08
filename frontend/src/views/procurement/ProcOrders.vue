@@ -7,8 +7,12 @@
 
         <!-- Filters -->
         <div class="ui-toolbar" style="margin-top:12px; display:flex; flex-wrap:wrap; gap:12px;">
-            <input class="input" v-model="filters.keyword" placeholder="Search by PO / vendor / type"
-                   style="min-width:220px;"/>
+            <input
+                class="input"
+                v-model="filters.keyword"
+                placeholder="Search by PO / vendor / type"
+                style="min-width:220px;"
+            />
 
             <div style="min-width:220px;">
                 <label>Status</label>
@@ -33,10 +37,20 @@
             </div>
 
             <div style="display:flex; gap:8px; align-items:end;">
-                <input class="input" type="number" v-model.number="filters.amountMin" placeholder="Amount ≥ $"
-                       style="width:140px;"/>
-                <input class="input" type="number" v-model.number="filters.amountMax" placeholder="Amount ≤ $"
-                       style="width:140px;"/>
+                <input
+                    class="input"
+                    type="number"
+                    v-model.number="filters.amountMin"
+                    placeholder="Amount ≥ $"
+                    style="width:140px;"
+                />
+                <input
+                    class="input"
+                    type="number"
+                    v-model.number="filters.amountMax"
+                    placeholder="Amount ≤ $"
+                    style="width:140px;"
+                />
             </div>
 
             <div style="display:flex; gap:8px; align-items:end;">
@@ -65,7 +79,7 @@
                         <TableSkeleton :rows="6"/>
                     </td>
                 </tr>
-                <tr v-else-if="paged.length===0">
+                <tr v-else-if="paged.length === 0">
                     <td colspan="8" style="text-align:center; color:var(--color-muted);">No orders</td>
                 </tr>
                 <tr v-else v-for="o in paged" :key="o.procureId">
@@ -83,7 +97,7 @@
                             style="margin-left:6px;"
                             :disabled="!canStart(o)"
                             :class="{ nohover: !canStart(o) }"
-                            @click="flow(o, 'procuring')"
+                            @click="askStart(o)"
                         >
                             Start
                         </button>
@@ -93,7 +107,7 @@
                             style="margin-left:6px;"
                             :disabled="!canConfirmArrival(o)"
                             :class="{ nohover: !canConfirmArrival(o) }"
-                            @click="flow(o, 'arrived')"
+                            @click="askConfirmArrival(o)"
                         >
                             Confirm Arrival
                         </button>
@@ -103,7 +117,7 @@
                             style="margin-left:6px;"
                             :disabled="!canTerminate(o)"
                             :class="{ nohover: !canTerminate(o) }"
-                            @click="flow(o, 'terminated')"
+                            @click="askTerminate(o)"
                         >
                             Terminate
                         </button>
@@ -122,7 +136,8 @@
                 Next
             </button>
             <button class="btn" :disabled="page===totalPages" :class="{ nohover: page===totalPages }"
-                    @click="page=totalPages">Last
+                    @click="page=totalPages">
+                Last
             </button>
             <select class="input" style="width:auto;" v-model.number="pageSize">
                 <option :value="5">5</option>
@@ -130,6 +145,24 @@
                 <option :value="20">20</option>
             </select>
         </div>
+
+        <!-- ===== 通用确认弹窗 ===== -->
+        <div v-if="confirmModal.open" class="modal-backdrop">
+            <div class="modal card" role="dialog" aria-modal="true">
+                <div class="title-lg">{{ confirmModal.title }}</div>
+                <div style="margin-top:8px; color:var(--color-muted); white-space:pre-line;">{{
+                        confirmModal.message
+                    }}
+                </div>
+                <div class="footer-actions">
+                    <button class="btn" :disabled="confirmModal.busy" @click="closeConfirm">Cancel</button>
+                    <button class="btn btn-primary" :disabled="confirmModal.busy" @click="runConfirm">
+                        {{ confirmModal.busy ? 'Working...' : 'Confirm' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- ===== /通用确认弹窗 ===== -->
     </div>
 </template>
 
@@ -142,21 +175,21 @@ import TableSkeleton from '@/components/admin/TableSkeleton.vue'
 const STATUSES = ['under-review', 'procuring', 'arrived', 'terminated']
 
 const loading = ref(true)
-const orders = ref([])     // [{procureId, equipmentTypeId, count, supplierId, status}]
-const vendors = ref([])    // [{id,name}]
-const types = ref([])      // [{id,name}]
-const quotes = ref([])     // [{supplierId,typeId,price}]
+const orders = ref([]) // [{procureId, equipmentTypeId, count, supplierId, status}]
+const vendors = ref([]) // [{id,name}]
+const types = ref([]) // [{id,name}]
+const quotes = ref([]) // [{supplierId,typeId,price}]
 
 /* ---------- filters ---------- */
 const filters = reactive({
     keyword: '',
-    statuses: [],         // 支持多选
+    statuses: [], // 支持多选
     vendorIds: [],
     typeIds: [],
     qtyMin: undefined,
     qtyMax: undefined,
     amountMin: undefined,
-    amountMax: undefined,
+    amountMax: undefined
 })
 
 /* ---------- options ---------- */
@@ -174,12 +207,12 @@ function money(n) {
 }
 
 function vendorName(id) {
-    const v = vendors.value.find(v => String(v.id) === String(id));
+    const v = vendors.value.find(v => String(v.id) === String(id))
     return v ? v.name : id
 }
 
 function typeName(id) {
-    const t = types.value.find(t => String(t.id) === String(id));
+    const t = types.value.find(t => String(t.id) === String(id))
     return t ? t.name : id
 }
 
@@ -189,12 +222,6 @@ function unitPriceOf(supplierId, typeId) {
 }
 
 /** ---------- 按钮可用性规则 ---------- */
-/**
- * - arrived：全部不能操作
- * - terminated：全部不能操作
- * - under-review：有 vendor -> 只能 Start / Terminate；没有 vendor -> 只能 Terminate
- * - procuring：可以 Confirm Arrival / Terminate，不能 Start
- */
 function hasVendor(o) {
     const sid = String(o.supplierId || '')
     return !!sid && sid !== '0000'
@@ -203,19 +230,17 @@ function hasVendor(o) {
 function canStart(o) {
     if (o.status === 'arrived' || o.status === 'terminated') return false
     if (o.status === 'procuring') return false
-    if (o.status === 'under-review') return hasVendor(o) // 有 vendor 才能 start
+    if (o.status === 'under-review') return hasVendor(o)
     return false
 }
 
 function canConfirmArrival(o) {
     if (o.status === 'arrived' || o.status === 'terminated') return false
-    // under-review 不允许 Confirm Arrival；procuring 才能
     return o.status === 'procuring'
 }
 
 function canTerminate(o) {
     if (o.status === 'arrived' || o.status === 'terminated') return false
-    // 其余状态均可终止
     return o.status === 'under-review' || o.status === 'procuring'
 }
 
@@ -242,8 +267,9 @@ const filtered = computed(() => {
         const up = unitPriceOf(o.supplierId, o.equipmentTypeId)
         const amt = up * (o.count || 0)
 
-        const hitKw = !kw || [`#${o.procureId}`, vendorName(o.supplierId), typeName(o.equipmentTypeId)]
-            .some(s => (s || '').toLowerCase().includes(kw))
+        const hitKw = !kw || [`#${o.procureId}`, vendorName(o.supplierId), typeName(o.equipmentTypeId)].some(s =>
+            (s || '').toLowerCase().includes(kw)
+        )
         const hitStatus = filters.statuses.length === 0 || filters.statuses.includes(o.status)
         const hitVendor = filters.vendorIds.length === 0 || filters.vendorIds.includes(String(o.supplierId))
         const hitType = filters.typeIds.length === 0 || filters.typeIds.includes(String(o.equipmentTypeId))
@@ -267,51 +293,55 @@ const paged = computed(() => {
 
 /* ------- API ------- */
 async function loadOrders() {
-    const r = await fetch('/req/proc/orders');
+    const r = await fetch('/req/proc/orders')
     const j = await r.json()
-    orders.value = j.code === '000'
-        ? (j.data || []).map(x => ({
-            procureId: Number(x.procure_id || x.procureId),
-            equipmentTypeId: String(x.equipment_type_id || x.equipmentTypeId),
-            count: Number(x.count || 0),
-            supplierId: String(x.supplier_id || x.supplierId || ''), // 可能为空或'0000'
-            status: String(x.status || 'under-review'),
-        }))
-        : []
+    orders.value =
+        j.code === '000'
+            ? (j.data || []).map(x => ({
+                procureId: Number(x.procure_id || x.procureId),
+                equipmentTypeId: String(x.equipment_type_id || x.equipmentTypeId),
+                count: Number(x.count || 0),
+                supplierId: String(x.supplier_id || x.supplierId || ''), // 可能为空或'0000'
+                status: String(x.status || 'under-review')
+            }))
+            : []
 }
 
 async function loadVendors() {
-    const r = await fetch('/req/proc/vendors');
+    const r = await fetch('/req/proc/vendors')
     const j = await r.json()
-    vendors.value = j.code === '000'
-        ? (j.data || []).map(x => ({id: String(x.supplier_id || x.id), name: x.supplier_name || x.name || '-'}))
-        : []
+    vendors.value =
+        j.code === '000'
+            ? (j.data || []).map(x => ({id: String(x.supplier_id || x.id), name: x.supplier_name || x.name || '-'}))
+            : []
 }
 
 async function loadTypes() {
-    const r = await fetch('/req/proc/equipmentTypes');
+    const r = await fetch('/req/proc/equipmentTypes')
     const j = await r.json()
-    types.value = j.code === '000'
-        ? (j.data || []).map(x => ({
-            id: String(x.equipment_type_id || x.id),
-            name: x.equipment_type_name || x.name || '-'
-        }))
-        : []
+    types.value =
+        j.code === '000'
+            ? (j.data || []).map(x => ({
+                id: String(x.equipment_type_id || x.id),
+                name: x.equipment_type_name || x.name || '-'
+            }))
+            : []
 }
 
 async function loadQuotes() {
-    const r = await fetch('/req/proc/quotes');
+    const r = await fetch('/req/proc/quotes')
     const j = await r.json()
-    quotes.value = j.code === '000'
-        ? (j.data || []).map(x => ({
-            supplierId: String(x.supplier_id || x.supplierId),
-            typeId: String(x.equipment_type_id || x.equipmentTypeId),
-            price: Number(x.price || 0)
-        }))
-        : []
+    quotes.value =
+        j.code === '000'
+            ? (j.data || []).map(x => ({
+                supplierId: String(x.supplier_id || x.supplierId),
+                typeId: String(x.equipment_type_id || x.equipmentTypeId),
+                price: Number(x.price || 0)
+            }))
+            : []
 }
 
-/* 状态流转（仅在前述可用性判断为 true 时才会触发） */
+/* ------- 状态更新底层方法 ------- */
 async function flow(o, toStatus) {
     if (o.status === toStatus) return
     const r = await fetch('/req/proc/order/status', {
@@ -322,6 +352,70 @@ async function flow(o, toStatus) {
     const j = await r.json().catch(() => ({code: 'ERR'}))
     if (j.code === '000') o.status = toStatus
     else alert(j.message || 'Failed to update status')
+}
+
+/* ===== 通用确认弹窗逻辑 ===== */
+const confirmModal = reactive({
+    open: false,
+    title: 'Confirm',
+    message: '',
+    busy: false,
+    run: null // () => Promise<void>
+})
+
+function openConfirm({title, message, run}) {
+    confirmModal.title = title || 'Confirm'
+    confirmModal.message = message || 'Are you sure?'
+    confirmModal.run = run || null
+    confirmModal.open = true
+}
+
+function closeConfirm() {
+    if (confirmModal.busy) return
+    confirmModal.open = false
+    confirmModal.message = ''
+    confirmModal.run = null
+}
+
+async function runConfirm() {
+    if (!confirmModal.run) return closeConfirm()
+    confirmModal.busy = true
+    try {
+        await confirmModal.run()
+    } catch (e) {
+        console.error(e)
+    } finally {
+        confirmModal.busy = false
+        closeConfirm()
+    }
+}
+
+/* ===== 各 Action 的确认入口 ===== */
+function askStart(o) {
+    if (!canStart(o)) return
+    openConfirm({
+        title: 'Start Procurement',
+        message: `Start procurement for PO #${o.procureId}?\nStatus will change to "procuring".`,
+        run: () => flow(o, 'procuring')
+    })
+}
+
+function askConfirmArrival(o) {
+    if (!canConfirmArrival(o)) return
+    openConfirm({
+        title: 'Confirm Arrival',
+        message: `Confirm arrival for PO #${o.procureId}?\nStatus will change to "arrived".`,
+        run: () => flow(o, 'arrived')
+    })
+}
+
+function askTerminate(o) {
+    if (!canTerminate(o)) return
+    openConfirm({
+        title: 'Terminate Order',
+        message: `Terminate PO #${o.procureId}?\nThis action cannot be undone.`,
+        run: () => flow(o, 'terminated')
+    })
 }
 
 /* ------- init ------- */
@@ -341,7 +435,8 @@ onMounted(async () => {
     border-collapse: collapse;
 }
 
-.ui-table th, .ui-table td {
+.ui-table th,
+.ui-table td {
     padding: 10px 12px;
     border-bottom: 1px solid #e5e7eb;
     text-align: left;
@@ -356,6 +451,34 @@ onMounted(async () => {
 /* 禁用按钮去掉 hover/指针效果 */
 .btn.nohover {
     pointer-events: none;
-    opacity: .6;
+    opacity: 0.6;
+}
+
+/* ===== 通用确认弹窗样式（与其他页面保持一致） ===== */
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 1000;
+}
+
+.modal {
+    width: min(520px, 100%);
+    padding: 16px;
+}
+
+.modal .title-lg {
+    text-align: center;
+}
+
+.footer-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
 }
 </style>
