@@ -6,6 +6,7 @@ import com.example.melms.pojo.Result;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -251,6 +252,7 @@ public class AdminController {
     @GetMapping("/req/admin/logs")
     public Result getLogs() {
         try {
+            System.out.println(Arrays.toString(logMapper.getLogs()));
             return Result.success("ok", logMapper.getLogs());
         } catch (Exception e) {
             return Result.fail("500", e.getMessage(), null);

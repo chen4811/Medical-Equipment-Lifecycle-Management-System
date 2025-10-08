@@ -6,12 +6,12 @@ public class Log {
     private int log_id;
     private Timestamp log_time;
     private String log_action;
-    private String log_user_id;
+    private int log_user_id;
 
     public Log() {
     }
 
-    public Log(int log_id, Timestamp log_time, String log_action, String log_user_id) {
+    public Log(int log_id, Timestamp log_time, String log_action, int log_user_id) {
         this.log_id = log_id;
         this.log_time = log_time;
         this.log_action = log_action;
@@ -70,7 +70,7 @@ public class Log {
      * 获取
      * @return log_user_id
      */
-    public String getLog_user_id() {
+    public int getLog_user_id() {
         return log_user_id;
     }
 
@@ -78,7 +78,7 @@ public class Log {
      * 设置
      * @param log_user_id
      */
-    public void setLog_user_id(String log_user_id) {
+    public void setLog_user_id(int log_user_id) {
         this.log_user_id = log_user_id;
     }
 
