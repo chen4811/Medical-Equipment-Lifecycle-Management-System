@@ -23,13 +23,13 @@ import {useRoute} from 'vue-router'
 import {computed} from 'vue'
 
 const menuItems = [
-    {label: 'Dashboard', to: '/procurement/dashboard'},
+    {label: 'Dashboard', to: '/procurement/dashboard', icon: '🏠'},
     // {label: 'Bids / RFQ', to: '/procurement/bids'},
-    {label: 'Vendors', to: '/procurement/vendors'},
-    {label: 'Purchase Requests', to: '/procurement/plans'},
-    {label: 'Purchase Orders', to: '/procurement/orders'},
+    {label: 'Vendors', to: '/procurement/vendors', icon: '👥'},
+    {label: 'Purchase Requests', to: '/procurement/plans', icon: '🛒'},
+    {label: 'Purchase Orders', to: '/procurement/orders', icon: '📄'},
     // {label: 'Contracts & Budget', to: '/procurement/contracts'},
-    {label: 'Receiving', to: '/procurement/receiving'},
+    {label: 'Receiving', to: '/procurement/receiving', icon: '📦'}
 ]
 
 const route = useRoute()
@@ -51,6 +51,7 @@ const today = formatDate(new Date())
     display: grid;
     grid-template-columns: 240px 1fr;
     height: 100vh;
+    gap: 0;
 }
 
 .content {
@@ -83,7 +84,25 @@ const today = formatDate(new Date())
     font-weight: 600;
 }
 
+/* 保留 AdminLayout 的统计区样式，以便未来需要时可直接启用 */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.stat-card {
+    padding: 8px;
+}
+
+.chart-title {
+    font-weight: 700;
+    margin: 12px 12px 0;
+    font-size: 14px;
+}
+
 .content-body {
     padding: 16px;
+    background: transparent;
 }
 </style>
