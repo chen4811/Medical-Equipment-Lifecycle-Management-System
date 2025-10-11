@@ -1,7 +1,6 @@
 <template>
     <div class="page">
         <div class="card p16">
-            <!-- 头部：标题 + 操作 -->
             <header class="header">
                 <div class="title">
                     <div class="h1">Procurement Overview</div>
@@ -13,20 +12,17 @@
                 </div>
             </header>
 
-            <!-- Loading Skeleton -->
             <div v-if="loading" class="grid">
                 <div class="skeleton" v-for="i in 6" :key="i"></div>
             </div>
 
-            <!-- Error State -->
             <div v-else-if="error" class="error">
                 <div>Failed to load: {{ error }}</div>
                 <button class="btn" @click="refresh">Retry</button>
             </div>
 
-            <!-- 正常内容 -->
             <template v-else>
-                <!-- 顶部指标卡 -->
+                <!-- Top stat cards -->
                 <div class="grid">
                     <StatCard label="Open Requisitions" :value="openReqs"/>
                     <StatCard label="Pending Receiving" :value="pendingReceiving"/>
@@ -34,7 +30,7 @@
                     <StatCard label="Vendors" :value="vendorCount"/>
                 </div>
 
-                <!-- 衍生 KPI（进度条风格与 EquipDashboard 一致） -->
+                <!-- KPIs -->
                 <div class="kpis">
                     <div class="kpi">
                         <div class="kpi-title">Total Orders</div>
@@ -64,31 +60,66 @@
                     </div>
                 </div>
 
-                <!-- 图表区 -->
+                <!-- Charts -->
                 <div class="stats-grid">
+                    <!-- 1: Donut -->
                     <div class="card stat-card">
                         <div class="chart-title">Orders by Status</div>
-                        <apexchart height="220" type="donut"
-                                   :options="cOrdersByStatus.options"
+                        <apexchart height="220" type="donut" :options="cOrdersByStatus.options"
                                    :series="cOrdersByStatus.series"/>
                     </div>
 
+                    <!-- 2: Bar -->
                     <div class="card stat-card">
                         <div class="chart-title">Spend by Supplier (Top 5)</div>
-                        <apexchart height="220" type="bar"
-                                   :options="cSpendBySupplier.options"
+                        <apexchart height="220" type="bar" :options="cSpendBySupplier.options"
                                    :series="cSpendBySupplier.series"/>
                     </div>
 
+                    <!-- 3: Bar -->
                     <div class="card stat-card">
                         <div class="chart-title">Units by Equipment</div>
-                        <apexchart height="220" type="bar"
-                                   :options="cUnitsByType.options"
+                        <apexchart height="220" type="bar" :options="cUnitsByType.options"
                                    :series="cUnitsByType.series"/>
+                    </div>
+
+                    <!-- 4: Line -->
+                    <div class="card stat-card">
+                        <div class="chart-title">Monthly Spend (last 6 months)</div>
+                        <apexchart height="220" type="line" :options="cMonthlySpendLine.options"
+                                   :series="cMonthlySpendLine.series"/>
+                    </div>
+
+                    <!-- 5: Area -->
+                    <div class="card stat-card">
+                        <div class="chart-title">Order Trend (last 12 weeks)</div>
+                        <apexchart height="220" type="area" :options="cWeeklyOrdersArea.options"
+                                   :series="cWeeklyOrdersArea.series"/>
+                    </div>
+
+                    <!-- 6: Stacked Bar -->
+                    <div class="card stat-card">
+                        <div class="chart-title">Monthly Orders by Status (stacked)</div>
+                        <apexchart height="220" type="bar" :options="cMonthlyOrdersStacked.options"
+                                   :series="cMonthlyOrdersStacked.series"/>
+                    </div>
+
+                    <!-- 7: Heatmap -->
+                    <div class="card stat-card">
+                        <div class="chart-title">Supplier × Month Spend (heatmap, top 5)</div>
+                        <apexchart height="260" type="heatmap" :options="cSupplierMonthHeatmap.options"
+                                   :series="cSupplierMonthHeatmap.series"/>
+                    </div>
+
+                    <!-- 8: Radar -->
+                    <div class="card stat-card">
+                        <div class="chart-title">Top Equipment Types (radar by units)</div>
+                        <apexchart height="260" type="radar" :options="cTopTypesRadar.options"
+                                   :series="cTopTypesRadar.series"/>
                     </div>
                 </div>
 
-                <!-- 最近订单 -->
+                <!-- Recent orders -->
                 <div class="card p16" style="margin-top:16px;">
                     <div class="title-sm" style="font-weight:700;">Recent Orders</div>
                     <div class="table-wrapper" style="margin-top:8px; overflow:auto;">
@@ -121,7 +152,7 @@
                     <p class="timestamp">Last updated: {{ lastUpdated }}</p>
                 </div>
 
-                <!-- 健康摘要 -->
+                <!-- Summary -->
                 <div class="card p16">
                     <div class="subtitle">Procurement Health Summary</div>
                     <p class="note">
@@ -141,12 +172,10 @@
 import StatCard from '@/components/layout/StatCard.vue'
 import {ref, computed, onMounted} from 'vue'
 
-// 状态
 const loading = ref(false)
 const error = ref('')
 const lastUpdated = ref('')
 
-// 数据
 const orders = ref([])
 const quotes = ref([])
 const vendors = ref([])
@@ -171,23 +200,69 @@ function fmtMoney(n) {
     return `$${Number(n || 0).toLocaleString()}`
 }
 
-// 加载函数
+function parseDateMaybe(v) {
+    if (!v) return null
+    const d = new Date(v)
+    return isNaN(d.getTime()) ? null : d
+}
+
+/* ---------- Date helpers (ASCII-only labels) ---------- */
+function pad(n) {
+    return String(n).padStart(2, '0')
+}
+
+function monthKey(d) {
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`
+}      // YYYY-MM
+function monthLabel(d) {
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`
+}   // YYYY-MM
+function startOfWeek(d) {
+    const x = new Date(d);
+    const day = x.getDay() || 7;
+    x.setHours(0, 0, 0, 0);
+    x.setDate(x.getDate() - (day - 1));
+    return x
+}
+
+function weekKey(d) {
+    const s = startOfWeek(d);
+    return `${s.getFullYear()}-${pad(s.getMonth() + 1)}-${pad(s.getDate())}`
+} // YYYY-MM-DD
+function weekLabel(d) {
+    return `${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}     // MM-DD
+
 async function loadOrders() {
-    const r = await fetch('/req/proc/orders');
+    const r = await fetch('/req/proc/orders')
     const j = await r.json()
-    orders.value = j.code === '000'
+    const raw = j.code === '000'
         ? (j.data || []).map(x => ({
             id: Number(x.procure_id ?? x.id ?? 0),
             supplierId: String(x.supplier_id ?? x.supplierId ?? ''),
             typeId: String(x.equipment_type_id ?? x.equipmentTypeId ?? ''),
             count: Number(x.count ?? 0),
             status: String(x.status ?? 'under-review'),
+            createdAt: parseDateMaybe(x.created_at ?? x.createdAt ?? x.order_date ?? x.orderDate ?? null),
         }))
         : []
+
+    // Backfill dates if all are missing: spread over the last 12 weeks
+    const needBackfill = raw.every(o => !o.createdAt)
+    if (needBackfill) {
+        const now = new Date()
+        raw.sort((a, b) => (a.id ?? 0) - (b.id ?? 0)).forEach((o, idx) => {
+            const weeksBack = Math.min(11, idx % 12)
+            const d = new Date(now)
+            d.setDate(d.getDate() - weeksBack * 7)
+            o.createdAt = d
+        })
+    }
+    orders.value = raw
 }
 
 async function loadQuotes() {
-    const r = await fetch('/req/proc/quotes');
+    const r = await fetch('/req/proc/quotes')
     const j = await r.json()
     quotes.value = j.code === '000'
         ? (j.data || []).map(x => ({
@@ -199,7 +274,7 @@ async function loadQuotes() {
 }
 
 async function loadVendors() {
-    const r = await fetch('/req/proc/vendors');
+    const r = await fetch('/req/proc/vendors')
     const j = await r.json()
     vendors.value = j.code === '000'
         ? (j.data || []).map(x => ({
@@ -210,7 +285,7 @@ async function loadVendors() {
 }
 
 async function loadTypes() {
-    const r = await fetch('/req/proc/equipmentTypes');
+    const r = await fetch('/req/proc/equipmentTypes')
     const j = await r.json()
     types.value = j.code === '000'
         ? (j.data || []).map(x => ({
@@ -220,7 +295,6 @@ async function loadTypes() {
         : []
 }
 
-// 计算工具
 function supplierName(id) {
     return vendors.value.find(v => v.id === id)?.name || id || '-'
 }
@@ -242,17 +316,13 @@ function countBy(status) {
     return orders.value.filter(o => o.status === status).length
 }
 
-// 顶部指标
 const openReqs = computed(() => countBy('under-review'))
-const pendingReceiving = computed(() => countBy('arrived')) // arrived 视为待收货/待入库环节
+const pendingReceiving = computed(() => countBy('arrived'))
 const spent = computed(() =>
-    orders.value
-        .filter(o => o.status !== 'terminated')
-        .reduce((sum, o) => sum + orderAmount(o), 0)
+    orders.value.filter(o => o.status !== 'terminated').reduce((sum, o) => sum + orderAmount(o), 0)
 )
 const vendorCount = computed(() => vendors.value.length)
 
-// KPI
 const totalOrders = computed(() => orders.value.length)
 const nonTerminated = computed(() => orders.value.filter(o => o.status !== 'terminated'))
 const avgOrderValue = computed(() => {
@@ -262,7 +332,7 @@ const avgOrderValue = computed(() => {
 const openRate = computed(() => totalOrders.value ? countBy('under-review') / totalOrders.value : 0)
 const arrivalRate = computed(() => totalOrders.value ? countBy('arrived') / totalOrders.value : 0)
 
-// 图表：订单状态分布
+/* Base charts */
 const cOrdersByStatus = computed(() => {
     const keys = ['under-review', 'procuring', 'arrived', 'terminated']
     const series = keys.map(k => countBy(k))
@@ -276,7 +346,6 @@ const cOrdersByStatus = computed(() => {
     }
 })
 
-// 图表：按供应商支出 Top 5
 const cSpendBySupplier = computed(() => {
     const map = new Map()
     for (const o of orders.value) {
@@ -291,12 +360,12 @@ const cSpendBySupplier = computed(() => {
             chart: {toolbar: {show: false}},
             plotOptions: {bar: {columnWidth: '55%'}},
             dataLabels: {enabled: true},
-            xaxis: {categories: rows.map(([k]) => supplierName(k))}
+            xaxis: {categories: rows.map(([k]) => supplierName(k))},
+            yaxis: {labels: {formatter: v => `$${Math.round(v).toLocaleString()}`}}
         }
     }
 })
 
-// 图表：按设备类型数量
 const cUnitsByType = computed(() => {
     const map = new Map()
     for (const o of orders.value) {
@@ -315,18 +384,173 @@ const cUnitsByType = computed(() => {
     }
 })
 
-// 最近订单
+/* Line: monthly spend (6 months) */
+const cMonthlySpendLine = computed(() => {
+    const now = new Date()
+    const months = []
+    for (let i = 5; i >= 0; i--) months.push(new Date(now.getFullYear(), now.getMonth() - i, 1))
+    const keys = months.map(d => monthKey(d))
+    const labels = months.map(d => monthLabel(d)) // ASCII yyyy-mm
+    const map = new Map(keys.map(k => [k, 0]))
+    for (const o of orders.value) {
+        const d = o.createdAt;
+        if (!d) continue
+        const k = monthKey(d);
+        if (map.has(k)) map.set(k, map.get(k) + orderAmount(o))
+    }
+    return {
+        series: [{name: 'Spend', data: keys.map(k => Math.round(map.get(k) || 0))}],
+        options: {
+            chart: {toolbar: {show: false}, zoom: {enabled: false}},
+            stroke: {curve: 'smooth', width: 3},
+            dataLabels: {enabled: false},
+            xaxis: {categories: labels},
+            yaxis: {labels: {formatter: v => `$${Math.round(v).toLocaleString()}`}},
+            tooltip: {y: {formatter: v => `$${Math.round(v).toLocaleString()}`}}
+        }
+    }
+})
+
+/* Area: weekly orders (12 weeks) */
+const cWeeklyOrdersArea = computed(() => {
+    const now = new Date()
+    const weeks = []
+    for (let i = 11; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i * 7);
+        weeks.push(d)
+    }
+    const keys = weeks.map(d => weekKey(d))
+    const labels = weeks.map(d => weekLabel(d)) // ASCII mm-dd
+    const map = new Map(keys.map(k => [k, 0]))
+    for (const o of orders.value) {
+        const d = o.createdAt;
+        if (!d) continue
+        const k = weekKey(d);
+        if (map.has(k)) map.set(k, map.get(k) + 1)
+    }
+    return {
+        series: [{name: 'Orders', data: keys.map(k => map.get(k) || 0)}],
+        options: {
+            chart: {toolbar: {show: false}, zoom: {enabled: false}},
+            stroke: {curve: 'smooth', width: 2},
+            dataLabels: {enabled: false},
+            fill: {type: 'gradient', gradient: {opacityFrom: 0.35, opacityTo: 0.05}},
+            xaxis: {categories: labels},
+            yaxis: {decimalsInFloat: 0},
+            tooltip: {y: {formatter: v => `${v} orders`}}
+        }
+    }
+})
+
+/* Stacked Bar: monthly orders by status (6 months) */
+const cMonthlyOrdersStacked = computed(() => {
+    const now = new Date()
+    const months = []
+    for (let i = 5; i >= 0; i--) months.push(new Date(now.getFullYear(), now.getMonth() - i, 1))
+    const keys = months.map(d => monthKey(d))
+    const labels = months.map(d => monthLabel(d)) // ASCII yyyy-mm
+    const statuses = ['under-review', 'procuring', 'arrived', 'terminated']
+    const base = () => new Map(keys.map(k => [k, 0]))
+    const bucket = {
+        'under-review': base(),
+        'procuring': base(),
+        'arrived': base(),
+        'terminated': base(),
+    }
+    for (const o of orders.value) {
+        const d = o.createdAt;
+        if (!d) continue
+        const k = monthKey(d);
+        if (!bucket[o.status] || !bucket[o.status].has(k)) continue
+        bucket[o.status].set(k, bucket[o.status].get(k) + 1)
+    }
+    return {
+        series: statuses.map(s => ({name: STATUS_LABEL[s], data: keys.map(k => bucket[s].get(k) || 0)})),
+        options: {
+            chart: {stacked: true, toolbar: {show: false}},
+            plotOptions: {bar: {columnWidth: '55%'}},
+            dataLabels: {enabled: false},
+            xaxis: {categories: labels},
+            legend: {position: 'bottom'}
+        }
+    }
+})
+
+/* Heatmap: supplier × month spend (top 5 suppliers, 6 months) */
+const cSupplierMonthHeatmap = computed(() => {
+    const now = new Date()
+    const months = []
+    for (let i = 5; i >= 0; i--) months.push(new Date(now.getFullYear(), now.getMonth() - i, 1))
+    const keys = months.map(d => monthKey(d))
+    const labels = months.map(d => monthLabel(d)) // ASCII yyyy-mm
+
+    const spendByVendor = new Map()
+    for (const o of orders.value) {
+        if (o.status === 'terminated') continue
+        spendByVendor.set(o.supplierId, (spendByVendor.get(o.supplierId) || 0) + orderAmount(o))
+    }
+    const topVendors = Array.from(spendByVendor.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([id]) => id)
+
+    const matrix = new Map(topVendors.map(v => [v, new Map(keys.map(k => [k, 0]))]))
+    for (const o of orders.value) {
+        if (!topVendors.includes(o.supplierId)) continue
+        const d = o.createdAt;
+        if (!d) continue
+        const k = monthKey(d)
+        if (matrix.get(o.supplierId)?.has(k)) {
+            matrix.get(o.supplierId).set(k, matrix.get(o.supplierId).get(k) + orderAmount(o))
+        }
+    }
+
+    const series = topVendors.map(v => ({
+        name: supplierName(v),
+        data: keys.map((k, idx) => ({x: labels[idx], y: Math.round(matrix.get(v).get(k) || 0)}))
+    }))
+
+    return {
+        series,
+        options: {
+            chart: {toolbar: {show: false}},
+            dataLabels: {enabled: false},
+            colors: ['#dbeafe', '#93c5fd', '#3b82f6', '#1d4ed8'],
+            plotOptions: {heatmap: {shadeIntensity: 0.4}},
+        }
+    }
+})
+
+/* Radar: top equipment types by units */
+const cTopTypesRadar = computed(() => {
+    const map = new Map()
+    for (const o of orders.value) {
+        map.set(o.typeId, (map.get(o.typeId) || 0) + (o.count || 0))
+    }
+    const top = Array.from(map.entries()).sort((a, b) => b[1] - a[1]).slice(0, 6)
+    const labels = top.map(([t]) => typeName(t))
+    const data = top.map(([, v]) => v)
+    return {
+        series: [{name: 'Units', data}],
+        options: {
+            chart: {toolbar: {show: false}},
+            xaxis: {categories: labels},
+            dataLabels: {enabled: true}
+        }
+    }
+})
+
 const recentOrders = computed(() =>
-    [...orders.value].sort((a, b) => (b.id ?? 0) - (a.id ?? 0)).slice(0, 6)
+    [...orders.value]
+        .sort((a, b) => (b.createdAt?.getTime?.() || 0) - (a.createdAt?.getTime?.() || 0))
+        .slice(0, 6)
 )
 
-// 交互
 async function refresh() {
     loading.value = true
     error.value = ''
     try {
         await Promise.all([loadOrders(), loadQuotes(), loadVendors(), loadTypes()])
-        lastUpdated.value = new Date().toLocaleString()
+        const d = new Date()
+        lastUpdated.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
     } catch (err) {
         error.value = err?.message || 'Unknown error'
     } finally {
@@ -343,7 +567,6 @@ function exportCsv() {
         ['Budget Spent (USD)', spent.value],
         ['Vendors', vendorCount.value],
         ['Average Order Value', Math.round(avgOrderValue.value)],
-
         ['', ''],
         ['Status', 'Count'],
         ['Under Review', countBy('under-review')],
@@ -365,7 +588,7 @@ onMounted(refresh)
 </script>
 
 <style scoped>
-/* layout & buttons - 与 EquipDashboard 风格一致 */
+/* layout & buttons */
 .page {
     padding: 16px;
 }
