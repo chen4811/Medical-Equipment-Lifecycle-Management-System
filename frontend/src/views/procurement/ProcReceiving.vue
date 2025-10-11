@@ -33,7 +33,7 @@
                 <tr>
                     <th style="min-width:100px;">PO</th>
                     <th>Equipment Type</th>
-                    <th>Qty</th>
+                    <th>Quantity</th>
                     <th>Vendor</th>
                     <th>Status</th>
                     <!-- Actions 列移除 -->

@@ -66,7 +66,7 @@
                 <tr>
                     <th style="min-width:100px;">Req ID</th>
                     <th>Equipment Type</th>
-                    <th>Qty</th>
+                    <th>Quantity</th>
                     <th>Requester</th>
                     <th>Department</th>
                     <th style="min-width:220px;">Supplier</th>

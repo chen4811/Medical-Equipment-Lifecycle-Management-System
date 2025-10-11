@@ -65,7 +65,7 @@
                 <tr>
                     <th>PO ID</th>
                     <th>Equipment Type</th>
-                    <th>Qty</th>
+                    <th>Quantity</th>
                     <th>Vendor</th>
                     <th>Unit Price</th>
                     <th>Total Price</th>
