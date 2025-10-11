@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import {createRouter, createWebHistory} from 'vue-router'
 // LocalStorage-based auth (no Pinia)
 
 const Login = () => import('@/views/Login.vue')
@@ -40,76 +40,75 @@ const ProcReceiving = () => import('@/views/procurement/ProcReceiving.vue')
 const ProcContracts = () => import('@/views/procurement/ProcContracts.vue')
 
 const router = createRouter({
-  history: createWebHistory(),
-  routes: [
-    { path: '/', redirect: '/login' },
-    { path: '/login', component: Login, meta: { public: true } },
-    {
-      path: '/admin',
-      component: AdminLayout,
-      children: [
-        { path: '', redirect: '/admin/dashboard' },
-        { path: 'dashboard', component: Dashboard, meta: { title: 'Dashboard', showCharts: true } },
-        { path: 'users', component: Users, meta: { title: 'User Management', showCharts: true } },
-        { path: 'orgs', component: Orgs, meta: { title: 'Departments', showCharts: false } },
-        { path: 'settings', component: Settings, meta: { title: 'Settings', showCharts: false } },
-        { path: 'logs', component: Logs, meta: { title: 'Logs', showCharts: false } },
-        { path: 'account', component: Account, meta: { title: 'Account', showCharts: false } },
-      ],
-    },
-    {
-      path: '/equipment',
-      component: EquipLayout,
-      children: [
-        { path: '', redirect: '/equipment/dashboard' },
-        { path: 'dashboard', component: EquipDashboard },
-        { path: 'ledger', component: EquipLedger },
-        { path: 'onboarding', component: EquipOnboarding },
-        { path: 'repairs', component: EquipRepairs },
-        { path: 'scrap', component: EquipScrap },
-      ],
-    },
-    {
-      path: '/department',
-      component: DeptLayout,
-      children: [
-        { path: '', redirect: '/department/dashboard' },
-        { path: 'dashboard', component: DeptDashboard, meta: { title: 'Dashboard' } },
-        { path: 'my-devices', component: DeptMyDevices, meta: { title: 'My Devices' } },
-        { path: 'usage', component: DeptUsage, meta: { title: 'Usage' } },
-        { path: 'repair', component: DeptRepair, meta: { title: 'Repair Request' } },
-        { path: 'requests', component: DeptRequests, meta: { title: 'Equipment Requests' } },
-        { path: 'account', component: DeptAccount, meta: { title: 'Account' } },
-      ],
-    },
-    {
-      path: '/procurement',
-      component: ProcLayout,
-      children: [
-        { path: '', redirect: '/procurement/dashboard' },
-        { path: 'dashboard', component: ProcDashboard },
-        { path: 'plans', component: ProcPlans },
-        { path: 'vendors', component: ProcVendors },
-        { path: 'bids', component: ProcBids },
-        { path: 'orders', component: ProcOrders },
-        { path: 'receiving', component: ProcReceiving },
-        { path: 'contracts', component: ProcContracts },
-      ],
-    },
-    { path: '/:pathMatch(.*)*', redirect: '/login' },
-  ],
+    history: createWebHistory(),
+    routes: [
+        {path: '/', redirect: '/login'},
+        {path: '/login', component: Login, meta: {public: true}},
+        {
+            path: '/admin',
+            component: AdminLayout,
+            children: [
+                {path: '', redirect: '/admin/dashboard'},
+                {path: 'dashboard', component: Dashboard, meta: {title: 'Dashboard', showCharts: true}},
+                {path: 'users', component: Users, meta: {title: 'User Management', showCharts: true}},
+                {path: 'orgs', component: Orgs, meta: {title: 'Departments', showCharts: false}},
+                {path: 'settings', component: Settings, meta: {title: 'Settings', showCharts: false}},
+                {path: 'logs', component: Logs, meta: {title: 'Logs', showCharts: false}},
+                {path: 'account', component: Account, meta: {title: 'Account', showCharts: false}},
+            ],
+        },
+        {
+            path: '/equipment',
+            component: EquipLayout,
+            children: [
+                {path: '', redirect: '/equipment/dashboard'},
+                {path: 'dashboard', component: EquipDashboard},
+                {path: 'ledger', component: EquipLedger},
+                {path: 'onboarding', component: EquipOnboarding},
+                {path: 'repairs', component: EquipRepairs},
+                {path: 'scrap', component: EquipScrap},
+            ],
+        },
+        {
+            path: '/department',
+            component: DeptLayout,
+            children: [
+                {path: '', redirect: '/department/dashboard'},
+                {path: 'dashboard', component: DeptDashboard, meta: {title: 'Dashboard'}},
+                {path: 'my-devices', component: DeptMyDevices, meta: {title: 'My Devices'}},
+                {path: 'usage', component: DeptUsage, meta: {title: 'Usage'}},
+                {path: 'repair', component: DeptRepair, meta: {title: 'Repair Request'}},
+                {path: 'requests', component: DeptRequests, meta: {title: 'Equipment Requests'}},
+                {path: 'account', component: DeptAccount, meta: {title: 'Account'}},
+            ],
+        },
+        {
+            path: '/procurement',
+            component: ProcLayout,
+            children: [
+                {path: '', redirect: '/procurement/dashboard'},
+                {path: 'dashboard', component: ProcDashboard},
+                {path: 'plans', component: ProcPlans},
+                {path: 'vendors', component: ProcVendors},
+                {path: 'bids', component: ProcBids},
+                {path: 'orders', component: ProcOrders},
+                {path: 'receiving', component: ProcReceiving},
+                {path: 'contracts', component: ProcContracts},
+                {path: 'account', component: Account, meta: {title: 'Account'}},
+            ],
+        },
+        {path: '/:pathMatch(.*)*', redirect: '/login'},
+    ],
 })
 
 router.beforeEach((to, _from, next) => {
-  const isLoggedIn = Boolean(localStorage.getItem('demo_logged_in'))
-  if (to.meta.public) return next()
-  if (to.path.startsWith('/admin')) {
-    if (isLoggedIn) return next()
-    return next('/login')
-  }
-  next()
+    const isLoggedIn = Boolean(localStorage.getItem('demo_logged_in'))
+    if (to.meta.public) return next()
+    if (to.path.startsWith('/admin')) {
+        if (isLoggedIn) return next()
+        return next('/login')
+    }
+    next()
 })
 
 export default router
-
-
