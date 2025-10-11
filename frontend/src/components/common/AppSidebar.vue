@@ -12,7 +12,7 @@
                 class="item"
                 :to="i.to"
                 :title="i.label"
-                aria-label="i.label"
+                :aria-label="i.label"
             >
                 <span class="icon" aria-hidden="true">{{ i.icon || '📁' }}</span>
                 <span class="label">{{ i.label }}</span>
@@ -114,7 +114,7 @@ function logout() {
     transition: background 120ms ease, color 120ms ease;
 }
 
-/* active (provided by vue-router as router-link-active) */
+/* active */
 .item.router-link-active {
     background: #f1f5f9;
     font-weight: 700;
@@ -127,11 +127,10 @@ function logout() {
     outline: none;
 }
 
-/* Icon */
+/* Icon（与 Admin 一致，不强制设颜色） */
 .icon {
     width: 18px;
     text-align: center;
-    color: var(--color-muted);
     font-size: 16px;
 }
 
@@ -148,15 +147,14 @@ function logout() {
     gap: 6px;
 }
 
+/* 按钮外观与链接一致，但不要覆盖 padding，保持与 .item 对齐 */
 .link {
     background: transparent;
     border: none;
     text-align: left;
     cursor: pointer;
-    padding: 10px 12px;
 }
 
-/* Make buttons behave like links visually */
 button.item {
     display: flex;
     align-items: center;
@@ -164,10 +162,9 @@ button.item {
     color: #111827;
     background: transparent;
     border: none;
-    padding: 0;
 }
 
-/* small responsive tweak: keep sidebar usable on narrow screens */
+/* small responsive tweak */
 @media (max-width: 720px) {
     .admin-sidebar {
         width: 220px;

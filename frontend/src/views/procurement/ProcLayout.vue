@@ -52,6 +52,7 @@ const today = formatDate(new Date())
     grid-template-columns: 240px 1fr;
     height: 100vh;
     gap: 0;
+    overflow: hidden; /* ✅ 阻止外层滚动 */
 }
 
 .content {
@@ -59,6 +60,8 @@ const today = formatDate(new Date())
     flex-direction: column;
     gap: 16px;
     padding: 16px;
+    overflow: auto; /* ✅ 只让内容区滚动 */
+    -webkit-overflow-scrolling: touch; /* ✅ 移动端平滑滚动 */
 }
 
 .page-header {
