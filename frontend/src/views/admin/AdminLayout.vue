@@ -5,25 +5,8 @@
             <AdminTopbar/>
             <div class="page-header">
                 <div class="heading">
-                    <div class="page-title">{{ pageTitle }}</div>
+                    <div class="page-title">{{ roleText }}</div>
                     <div class="page-date">{{ today }}</div>
-                </div>
-                <div v-if="showCharts" class="stats-grid">
-                    <div class="card stat-card">
-                        <div class="chart-title">Employees by Department</div>
-                        <apexchart :key="chartKeys.dept" height="200" type="bar" :options="charts.deptBar.options"
-                                   :series="charts.deptBar.series"/>
-                    </div>
-                    <div class="card stat-card">
-                        <div class="chart-title">Users by Role</div>
-                        <apexchart :key="chartKeys.roles" height="200" type="donut" :options="charts.rolesPie.options"
-                                   :series="charts.rolesPie.series"/>
-                    </div>
-                    <div class="card stat-card">
-                        <div class="chart-title">Tickets by Category</div>
-                        <apexchart :key="chartKeys.tickets" height="200" type="bar" :options="charts.ticketsBar.options"
-                                   :series="charts.ticketsBar.series"/>
-                    </div>
                 </div>
             </div>
             <div class="content-body">
@@ -37,12 +20,13 @@
 import AdminSidebar from '@/components/admin/AdminSidebar.vue'
 import AdminTopbar from '@/components/admin/AdminTopbar.vue'
 import {useRoute} from 'vue-router'
-import {computed, reactive, onMounted, ref, watch} from 'vue'
+import {computed} from 'vue'
 
 // menu 由 AdminSidebar 维护
 const route = useRoute()
 const pageTitle = computed(() => route.meta.title || 'Admin')
-const showCharts = computed(() => Boolean(route.meta.showCharts))
+// 统一风格：不再在布局中渲染图表，移动到各页面的 Overview 卡片内
+const showCharts = computed(() => false)
 
 function formatDate(d) {
     try {
@@ -54,83 +38,17 @@ function formatDate(d) {
 
 const today = formatDate(new Date())
 
-const charts = reactive({
-    deptBar: {
-        options: {
-            chart: {toolbar: {show: false}},
-            plotOptions: {bar: {columnWidth: '55%'}},
-            xaxis: {categories: [], labels: {show: true}},
-            dataLabels: {enabled: true},
-            colors: ['#3b82f6']
-        },
-        series: [{name: 'Employees', data: []}]
-    },
-    rolesPie: {
-        options: {
-            labels: [],
-            legend: {show: true, position: 'bottom'},
-            dataLabels: {enabled: true},
-            colors: ['#60a5fa', '#34d399', '#fbbf24', '#f87171']
-        },
-        series: []
-    },
-    ticketsBar: {
-        options: {
-            chart: {toolbar: {show: false}},
-            plotOptions: {bar: {columnWidth: '55%'}},
-            xaxis: {categories: [], labels: {show: true}},
-            dataLabels: {enabled: true},
-            colors: ['#10b981']
-        },
-        series: [{name: 'Tickets', data: []}]
-    },
+const role = computed(() => localStorage.getItem('role') || '')
+const roleText = computed(() => {
+    const r = role.value
+    if (r === 'Admin' || r === 'SYS_ADMIN') return 'Administrator'
+    if (r === 'E-Manager' || r === 'EQUIP_MANAGER') return 'Equipment Manager'
+    if (r === 'D-User' || r === 'DEPT_USER') return 'Department User'
+    if (r === 'P-Staff' || r === 'PROC_STAFF') return 'Procurement Staff'
+    return r
 })
 
-const chartsLoaded = ref(false)
-const chartKeys = reactive({dept: 0, roles: 0, tickets: 0})
-
-async function loadCharts() {
-    try {
-        const r = await fetch('/req/admin/dashboard')
-        const j = await r.json()
-        const data = j.data || {}
-
-        const departments = Array.isArray(data.departments) ? data.departments : []
-        charts.deptBar.options.xaxis.categories = departments.map(d => String(d.name || 'Dept'))
-        charts.deptBar.series[0].data = departments.map(d => Number(d.count || 0))
-        chartKeys.dept++
-
-        const usersByRole = Array.isArray(data.usersByRole) ? data.usersByRole : []
-        const roleMap = {
-            'Admin': 'System Admin',
-            'E-Manager': 'Equip Manager',
-            'D-User': 'Dept User',
-            'P-Staff': 'Proc Staff',
-            'SYS_ADMIN': 'System Admin',
-            'EQUIP_MANAGER': 'Equip Manager',
-            'DEPT_USER': 'Dept User',
-            'PROC_STAFF': 'Proc Staff'
-        }
-        charts.rolesPie.options.labels = usersByRole.map(r => String(roleMap[r.role] || r.role || 'Unknown'))
-        charts.rolesPie.series = usersByRole.map(r => Number(r.count || 0))
-        chartKeys.roles++
-
-        const ticketCategories = Array.isArray(data.ticketCategories) ? data.ticketCategories : []
-        charts.ticketsBar.options.xaxis.categories = ticketCategories.map(t => String(t.name))
-        charts.ticketsBar.series[0].data = ticketCategories.map(t => Number(t.count || 0))
-        chartKeys.tickets++
-        chartsLoaded.value = true
-    } catch {
-    }
-}
-
-onMounted(() => {
-    if (showCharts.value) loadCharts()
-})
-
-watch(() => showCharts.value, (v) => {
-    if (v && !chartsLoaded.value) loadCharts()
-})
+// 已移除布局层面的图表加载逻辑
 </script>
 
 <style scoped>
@@ -155,6 +73,7 @@ watch(() => showCharts.value, (v) => {
     display: flex;
     flex-direction: column;
     gap: 16px;
+    padding: 0 16px;
 }
 
 .heading {
@@ -174,21 +93,7 @@ watch(() => showCharts.value, (v) => {
     font-weight: 600;
 }
 
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 16px;
-}
-
-.stat-card {
-    padding: 8px;
-}
-
-.chart-title {
-    font-weight: 700;
-    margin: 12px 12px 0;
-    font-size: 14px;
-}
+/* 布局不再内置图表网格，样式移交各页面 */
 
 .content-body {
     padding: 16px;

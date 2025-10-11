@@ -1,121 +1,99 @@
 <template>
     <div class="page">
-        <!-- Top Section: Title + Actions -->
-        <div class="page-header">
-            <div class="title">
-                <h2>Department Dashboard</h2>
-                <p class="muted">
-                    Department ID:
-                    <span v-if="departmentId">{{ departmentId }}</span>
-                    <span v-else>Not Available</span>
-                    <span v-if="lastUpdated" class="dot">•</span>
-                    <span v-if="lastUpdated">Last Updated: {{ formatTime(lastUpdated) }}</span>
-                </p>
-            </div>
-            <div class="actions">
-                <button class="btn" :disabled="loading" @click="refresh">
-                    {{ loading ? 'Refreshing…' : 'Refresh Data' }}
-                </button>
-            </div>
-        </div>
-
-        <!-- Error Message -->
-        <div v-if="error" class="alert">
-            <strong>Failed to load:</strong>{{ error }}
-        </div>
-
-        <!-- Skeleton Loading -->
-        <div v-if="loading && !hasAnyData" class="skeleton-grid">
-            <div class="skeleton-card" v-for="i in 4" :key="i"></div>
-        </div>
-
-        <!-- KPI Grid -->
-        <div v-else class="card" style="padding:16px;">
-            <div class="grid">
-                <StatCard label="In-Use Devices" :value="inUse"/>
-                <StatCard label="Devices Under Repair" :value="underRepair"/>
-                <StatCard label="Today Usage Logs" :value="todosUsage"/>
-                <StatCard label="Unfinished Repairments" :value="todosRepair"/>
-            </div>
-        </div>
-
-        <!-- Derived Metrics -->
-        <div class="grid two">
-            <div class="card padded">
-                <h3>Usage & Repair Overview</h3>
-                <p class="muted">Collect from in-use and under-repair data</p>
-
-                <div class="metric-row">
-                    <div class="metric">
-                        <div class="metric-label">Total Devices (Estimated)</div>
-                        <div class="metric-value">{{ totalDevices }}</div>
-                    </div>
-                    <div class="metric">
-                        <div class="metric-label">Repair Ratio</div>
-                        <div class="metric-value">{{ (repairRatio * 100).toFixed(1) }}%</div>
-                    </div>
+        <div class="card p16">
+            <header class="header">
+                <div>
+                    <div class="title-lg">Department Overview</div>
+                    <div class="subtitle" style="margin-top:8px;">Department Dashboard</div>
                 </div>
-
-                <!-- Progress Bar: In Use vs. Repair -->
-                <div class="progress">
-                    <div
-                        class="progress-inuse"
-                        :style="{ width: inUseBar + '%' }"
-                        :title="`In Use ${inUse}`"
-                    ></div>
-                    <div
-                        class="progress-repair"
-                        :style="{ width: underRepairBar + '%' }"
-                        :title="`Under Repair ${underRepair}`"
-                    ></div>
+                <div class="actions">
+                    <button class="btn" :disabled="loading" @click="refresh">
+                        {{ loading ? 'Refreshing…' : 'Refresh Data' }}
+                    </button>
                 </div>
+            </header>
 
-                <div class="legend">
-                    <span class="badge inuse"></span> In Use {{ inUse }}
-                    <span class="spacer"></span>
-                    <span class="badge repair"></span> Under Repair {{ underRepair }}
-                </div>
+            <!-- Error -->
+            <div v-if="error" class="alert">
+                <strong>Failed to load:</strong>{{ error }}
             </div>
 
-            <div class="card padded">
-                <h3>Todo Overview (Today)</h3>
-                <p class="muted">View today log from current stats</p>
-
-                <div class="todo-grid">
-                    <div class="todo">
-                        <div class="todo-label">Usage Logs Pending</div>
-                        <div class="todo-value">{{ todosUsage }}</div>
-                    </div>
-                    <div class="todo">
-                        <div class="todo-label">Repairs Pending</div>
-                        <div class="todo-value">{{ todosRepair }}</div>
-                    </div>
-                    <div class="todo total">
-                        <div class="todo-label">Total Todos</div>
-                        <div class="todo-value">{{ totalTodos }}</div>
-                    </div>
-                </div>
-
-                <!-- Todo Progress Bar -->
-                <div class="progress thin">
-                    <div
-                        class="progress-usage"
-                        :style="{ width: usageTodoBar + '%' }"
-                        :title="`Usage Todos ${todosUsage}`"
-                    ></div>
-                    <div
-                        class="progress-repair"
-                        :style="{ width: repairTodoBar + '%' }"
-                        :title="`Repair Todos ${todosRepair}`"
-                    ></div>
-                </div>
-
-                <div class="legend">
-                    <span class="badge usage"></span> Usage Todos {{ todosUsage }}
-                    <span class="spacer"></span>
-                    <span class="badge repair"></span> Repair Todos {{ todosRepair }}
-                </div>
+            <!-- Skeleton -->
+            <div v-else-if="loading && !hasAnyData" class="skeleton-grid">
+                <div class="skeleton-card" v-for="i in 4" :key="i"></div>
             </div>
+
+            <!-- 内容块（与采购页相同：全部置于外层卡片内） -->
+            <template v-else>
+                <!-- KPI -->
+                <div class="grid">
+                    <StatCard label="In-Use Devices" :value="inUse"/>
+                    <StatCard label="Devices Under Repair" :value="underRepair"/>
+                    <StatCard label="Today Usage Logs" :value="todosUsage"/>
+                    <StatCard label="Unfinished Repairments" :value="todosRepair"/>
+                </div>
+
+                <!-- 二列区块，每个再是内层卡片（与采购页统一宽度） -->
+                <div class="grid two wide" style="margin-top:16px;">
+                    <div class="card p16">
+                        <div class="subtitle">Usage & Repair Overview</div>
+                        <p class="muted">Collect from in-use and under-repair data</p>
+
+                        <div class="metric-row">
+                            <div class="metric">
+                                <div class="metric-label">Total Devices (Estimated)</div>
+                                <div class="metric-value">{{ totalDevices }}</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-label">Repair Ratio</div>
+                                <div class="metric-value">{{ (repairRatio * 100).toFixed(1) }}%</div>
+                            </div>
+                        </div>
+
+                        <div class="progress">
+                            <div class="progress-inuse" :style="{ width: inUseBar + '%' }" :title="`In Use ${inUse}`"></div>
+                            <div class="progress-repair" :style="{ width: underRepairBar + '%' }" :title="`Under Repair ${underRepair}`"></div>
+                        </div>
+
+                        <div class="legend">
+                            <span class="badge inuse"></span> In Use {{ inUse }}
+                            <span class="spacer"></span>
+                            <span class="badge repair"></span> Under Repair {{ underRepair }}
+                        </div>
+                    </div>
+
+                    <div class="card p16">
+                        <div class="subtitle">Todo Overview (Today)</div>
+                        <p class="muted">View today log from current stats</p>
+
+                        <div class="todo-grid">
+                            <div class="todo">
+                                <div class="todo-label">Usage Logs Pending</div>
+                                <div class="todo-value">{{ todosUsage }}</div>
+                            </div>
+                            <div class="todo">
+                                <div class="todo-label">Repairs Pending</div>
+                                <div class="todo-value">{{ todosRepair }}</div>
+                            </div>
+                            <div class="todo total">
+                                <div class="todo-label">Total Todos</div>
+                                <div class="todo-value">{{ totalTodos }}</div>
+                            </div>
+                        </div>
+
+                        <div class="progress thin">
+                            <div class="progress-usage" :style="{ width: usageTodoBar + '%' }" :title="`Usage Todos ${todosUsage}`"></div>
+                            <div class="progress-repair" :style="{ width: repairTodoBar + '%' }" :title="`Repair Todos ${todosRepair}`"></div>
+                        </div>
+
+                        <div class="legend">
+                            <span class="badge usage"></span> Usage Todos {{ todosUsage }}
+                            <span class="spacer"></span>
+                            <span class="badge repair"></span> Repair Todos {{ todosRepair }}
+                        </div>
+                    </div>
+                </div>
+            </template>
         </div>
 
     </div>
@@ -242,49 +220,13 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.page {
-    display: grid;
-    gap: 16px;
-}
+.page { padding: 0; }
 
-/* Top Section */
-.page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    gap: 12px;
-}
+/* Header 与 buttons 统一 */
+.header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
 
-.title h2 {
-    margin: 0 0 4px 0;
-    font-size: 20px;
-}
-
-.muted {
-    color: #6b7280;
-    padding-top: 5px;
-    padding-bottom: 5px;
-    font-style: italic;
-}
-
-.muted.small {
-    font-size: 12px;
-}
-
-.dot {
-    margin: 0 6px;
-}
-
-/* Card Styling */
-.card {
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    background: #fff;
-}
-
-.padded {
-    padding: 16px;
-}
+/* Card 在全局 theme.css 中已统一，这里仅控制内边距 */
+.padded { padding:16px; }
 
 /* Grid */
 .grid {
@@ -294,6 +236,10 @@ onMounted(async () => {
 }
 
 .grid.two {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.grid.two.wide {
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 }
 

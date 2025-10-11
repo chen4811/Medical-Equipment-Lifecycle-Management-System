@@ -5,7 +5,7 @@
             <AdminTopbar/>
             <div class="page-header">
                 <div class="heading">
-                    <div class="page-title">{{ pageTitle }}</div>
+                    <div class="page-title">{{ roleText }}</div>
                     <div class="page-date">{{ today }}</div>
                 </div>
             </div>
@@ -42,6 +42,16 @@ function formatDate(d) {
 }
 
 const today = formatDate(new Date())
+
+const role = computed(() => localStorage.getItem('role') || '')
+const roleText = computed(() => {
+    const r = role.value
+    if (r === 'Admin' || r === 'SYS_ADMIN') return 'Administrator'
+    if (r === 'E-Manager' || r === 'EQUIP_MANAGER') return 'Equipment Manager'
+    if (r === 'D-User' || r === 'DEPT_USER') return 'Department User'
+    if (r === 'P-Staff' || r === 'PROC_STAFF') return 'Procurement Staff'
+    return r
+})
 </script>
 
 <style scoped>
@@ -66,6 +76,7 @@ const today = formatDate(new Date())
     display: flex;
     flex-direction: column;
     gap: 16px;
+    padding: 0 16px;
 }
 
 .heading {

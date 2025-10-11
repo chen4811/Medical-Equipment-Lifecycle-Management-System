@@ -1,5 +1,6 @@
 <template>
     <div class="page">
+        <!-- 顶卡片 + Header，与采购页一致 -->
         <div class="card p16">
             <header class="header">
                 <div class="title">
@@ -350,15 +351,9 @@ const StackedBar = {
 
 <style scoped>
 /* layout */
-.page {
-    padding: 16px;
-}
+.page { padding: 0; }
 
-.card {
-    background: #fff;
-    border: 1px solid #eee;
-    border-radius: 12px;
-}
+/* 使用全局 .card 样式，不再本地覆盖 */
 
 .p16 {
     padding: 16px;
@@ -467,7 +462,7 @@ const StackedBar = {
 /* viz */
 .viz {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 16px;
     margin-top: 16px;
 }
