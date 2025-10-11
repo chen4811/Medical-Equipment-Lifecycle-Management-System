@@ -1,10 +1,11 @@
 <template>
     <div class="page">
+        <!-- 顶部总卡：保持与 Vendors 页一致的 card 样式 + 16px 内边距 -->
         <div class="card p16">
             <header class="header">
-                <div class="title">
-                    <div class="h1">Procurement Overview</div>
-                    <div class="sub">Procurement Dashboard</div>
+                <div>
+                    <div class="title-lg">Procurement Overview</div>
+                    <div class="subtitle" style="margin-top:8px;">Procurement Dashboard</div>
                 </div>
                 <div class="actions">
                     <button class="btn" @click="refresh" :disabled="loading">Refresh</button>
@@ -63,56 +64,56 @@
                 <!-- Charts -->
                 <div class="stats-grid">
                     <!-- 1: Donut -->
-                    <div class="card stat-card">
+                    <div class="card p16 stat-card">
                         <div class="chart-title">Orders by Status</div>
                         <apexchart height="220" type="donut" :options="cOrdersByStatus.options"
                                    :series="cOrdersByStatus.series"/>
                     </div>
 
                     <!-- 2: Bar -->
-                    <div class="card stat-card">
+                    <div class="card p16 stat-card">
                         <div class="chart-title">Spend by Supplier (Top 5)</div>
                         <apexchart height="220" type="bar" :options="cSpendBySupplier.options"
                                    :series="cSpendBySupplier.series"/>
                     </div>
 
                     <!-- 3: Bar -->
-                    <div class="card stat-card">
+                    <div class="card p16 stat-card">
                         <div class="chart-title">Units by Equipment</div>
                         <apexchart height="220" type="bar" :options="cUnitsByType.options"
                                    :series="cUnitsByType.series"/>
                     </div>
 
                     <!-- 4: Line -->
-                    <div class="card stat-card">
+                    <div class="card p16 stat-card">
                         <div class="chart-title">Monthly Spend (last 6 months)</div>
                         <apexchart height="220" type="line" :options="cMonthlySpendLine.options"
                                    :series="cMonthlySpendLine.series"/>
                     </div>
 
                     <!-- 5: Area -->
-                    <div class="card stat-card">
+                    <div class="card p16 stat-card">
                         <div class="chart-title">Order Trend (last 12 weeks)</div>
                         <apexchart height="220" type="area" :options="cWeeklyOrdersArea.options"
                                    :series="cWeeklyOrdersArea.series"/>
                     </div>
 
                     <!-- 6: Stacked Bar -->
-                    <div class="card stat-card">
+                    <div class="card p16 stat-card">
                         <div class="chart-title">Monthly Orders by Status (stacked)</div>
                         <apexchart height="220" type="bar" :options="cMonthlyOrdersStacked.options"
                                    :series="cMonthlyOrdersStacked.series"/>
                     </div>
 
                     <!-- 7: Heatmap -->
-                    <div class="card stat-card">
+                    <div class="card p16 stat-card">
                         <div class="chart-title">Supplier × Month Spend (heatmap, top 5)</div>
                         <apexchart height="260" type="heatmap" :options="cSupplierMonthHeatmap.options"
                                    :series="cSupplierMonthHeatmap.series"/>
                     </div>
 
                     <!-- 8: Radar -->
-                    <div class="card stat-card">
+                    <div class="card p16 stat-card">
                         <div class="chart-title">Top Equipment Types (radar by units)</div>
                         <apexchart height="260" type="radar" :options="cTopTypesRadar.options"
                                    :series="cTopTypesRadar.series"/>
@@ -129,7 +130,7 @@
                                 <th style="width:120px;">Procure ID</th>
                                 <th>Supplier</th>
                                 <th>Equipment Type</th>
-                                <th style="width:100px;">Qty</th>
+                                <th style="width:100px;">Quantity</th>
                                 <th style="width:140px;">Status</th>
                                 <th style="width:140px;">Amount</th>
                             </tr>
@@ -172,6 +173,7 @@
 import StatCard from '@/components/layout/StatCard.vue'
 import {ref, computed, onMounted} from 'vue'
 
+/* 逻辑保持原样（省略：与原文件一致） */
 const loading = ref(false)
 const error = ref('')
 const lastUpdated = ref('')
@@ -332,7 +334,7 @@ const avgOrderValue = computed(() => {
 const openRate = computed(() => totalOrders.value ? countBy('under-review') / totalOrders.value : 0)
 const arrivalRate = computed(() => totalOrders.value ? countBy('arrived') / totalOrders.value : 0)
 
-/* Base charts */
+/* ---- 图表 computed（保持原样） ---- */
 const cOrdersByStatus = computed(() => {
     const keys = ['under-review', 'procuring', 'arrived', 'terminated']
     const series = keys.map(k => countBy(k))
@@ -384,13 +386,12 @@ const cUnitsByType = computed(() => {
     }
 })
 
-/* Line: monthly spend (6 months) */
 const cMonthlySpendLine = computed(() => {
     const now = new Date()
     const months = []
     for (let i = 5; i >= 0; i--) months.push(new Date(now.getFullYear(), now.getMonth() - i, 1))
     const keys = months.map(d => monthKey(d))
-    const labels = months.map(d => monthLabel(d)) // ASCII yyyy-mm
+    const labels = months.map(d => monthLabel(d))
     const map = new Map(keys.map(k => [k, 0]))
     for (const o of orders.value) {
         const d = o.createdAt;
@@ -411,7 +412,6 @@ const cMonthlySpendLine = computed(() => {
     }
 })
 
-/* Area: weekly orders (12 weeks) */
 const cWeeklyOrdersArea = computed(() => {
     const now = new Date()
     const weeks = []
@@ -421,7 +421,7 @@ const cWeeklyOrdersArea = computed(() => {
         weeks.push(d)
     }
     const keys = weeks.map(d => weekKey(d))
-    const labels = weeks.map(d => weekLabel(d)) // ASCII mm-dd
+    const labels = weeks.map(d => weekLabel(d))
     const map = new Map(keys.map(k => [k, 0]))
     for (const o of orders.value) {
         const d = o.createdAt;
@@ -443,13 +443,12 @@ const cWeeklyOrdersArea = computed(() => {
     }
 })
 
-/* Stacked Bar: monthly orders by status (6 months) */
 const cMonthlyOrdersStacked = computed(() => {
     const now = new Date()
     const months = []
     for (let i = 5; i >= 0; i--) months.push(new Date(now.getFullYear(), now.getMonth() - i, 1))
     const keys = months.map(d => monthKey(d))
-    const labels = months.map(d => monthLabel(d)) // ASCII yyyy-mm
+    const labels = months.map(d => monthLabel(d))
     const statuses = ['under-review', 'procuring', 'arrived', 'terminated']
     const base = () => new Map(keys.map(k => [k, 0]))
     const bucket = {
@@ -477,7 +476,6 @@ const cMonthlyOrdersStacked = computed(() => {
     }
 })
 
-/* Heatmap: supplier × month spend (top 5 suppliers, 6 months) */
 const cSupplierMonthHeatmap = computed(() => {
     const now = new Date()
     const months = []
@@ -485,6 +483,7 @@ const cSupplierMonthHeatmap = computed(() => {
     const keys = months.map(d => monthKey(d))
     const labels = months.map(d => monthLabel(d)) // ASCII yyyy-mm
 
+    // Top 5 vendors by total spend
     const spendByVendor = new Map()
     for (const o of orders.value) {
         if (o.status === 'terminated') continue
@@ -492,20 +491,75 @@ const cSupplierMonthHeatmap = computed(() => {
     }
     const topVendors = Array.from(spendByVendor.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([id]) => id)
 
-    const matrix = new Map(topVendors.map(v => [v, new Map(keys.map(k => [k, 0]))]))
+    // vendor × month matrix (raw amounts)
+    const rawMatrix = new Map(topVendors.map(v => [v, new Map(keys.map(k => [k, 0]))]))
     for (const o of orders.value) {
         if (!topVendors.includes(o.supplierId)) continue
         const d = o.createdAt;
         if (!d) continue
         const k = monthKey(d)
-        if (matrix.get(o.supplierId)?.has(k)) {
-            matrix.get(o.supplierId).set(k, matrix.get(o.supplierId).get(k) + orderAmount(o))
+        if (rawMatrix.get(o.supplierId)?.has(k)) {
+            rawMatrix.get(o.supplierId).set(k, rawMatrix.get(o.supplierId).get(k) + orderAmount(o))
         }
     }
 
+    // === 映射函数：线性/对数（对数能放大小额差异）===
+    const useLog = false
+    const mapVal = (raw) => useLog ? Math.log10(1 + raw) : raw
+
+    // 收集正值（>0）的映射值用于分位数分桶；0 值单独成档
+    const posMapped = []
+    for (const v of rawMatrix.values()) {
+        for (const k of keys) {
+            const raw = v.get(k) || 0
+            if (raw > 0) posMapped.push(mapVal(raw))
+        }
+    }
+
+    // 边界：若全为 0，则给出单档（最浅色）
+    if (posMapped.length === 0) {
+        const seriesZero = topVendors.map(v => ({
+            name: supplierName(v),
+            data: keys.map((k, idx) => ({x: labels[idx], y: 0, _raw: 0}))
+        }))
+        return {
+            series: seriesZero,
+            options: {
+                chart: {toolbar: {show: false}},
+                dataLabels: {enabled: false},
+                plotOptions: {
+                    heatmap: {
+                        enableShades: false,
+                        colorScale: {
+                            min: 0,
+                            max: 0,
+                            ranges: [{from: 0, to: 0, color: '#f8fafc', name: '0'}]
+                        }
+                    }
+                },
+                tooltip: {y: {formatter: () => '$0'}}
+            }
+        }
+    }
+
+    // 分位数（对正值的映射值计算）
+    posMapped.sort((a, b) => a - b)
+    const q = (p) => {
+        const i = Math.floor((posMapped.length - 1) * p)
+        return posMapped[i]
+    }
+    // 你可以调节这些分位点的密度
+    const p20 = q(0.20), p40 = q(0.40), p60 = q(0.60), p80 = q(0.80), p95 = q(0.95)
+    const minPos = posMapped[0]
+    const maxPos = posMapped[posMapped.length - 1]
+
+    // 生成 series，y 使用映射值；tooltip 用原始金额
     const series = topVendors.map(v => ({
         name: supplierName(v),
-        data: keys.map((k, idx) => ({x: labels[idx], y: Math.round(matrix.get(v).get(k) || 0)}))
+        data: keys.map((k, idx) => {
+            const raw = rawMatrix.get(v).get(k) || 0
+            return {x: labels[idx], y: mapVal(raw), _raw: raw}
+        })
     }))
 
     return {
@@ -513,13 +567,43 @@ const cSupplierMonthHeatmap = computed(() => {
         options: {
             chart: {toolbar: {show: false}},
             dataLabels: {enabled: false},
-            colors: ['#dbeafe', '#93c5fd', '#3b82f6', '#1d4ed8'],
-            plotOptions: {heatmap: {shadeIntensity: 0.4}},
+            plotOptions: {
+                heatmap: {
+                    enableShades: false,       // 离散色带
+                    shadeIntensity: 0,
+                    colorScale: {
+                        // 关键点：min 固定为 0，让 y=0（即 raw=0）永远落在零档
+                        min: 0,
+                        max: maxPos,
+                        ranges: [
+                            // 0 值单独一档（最浅）
+                            {from: 0, to: 0, color: '#f8fafc', name: '0'},
+
+                            // 正值分位档（注意：这些阈值是映射后的 y 值）
+                            {from: minPos, to: p20, color: '#dbeafe', name: 'P00+–P20'},
+                            {from: p20, to: p40, color: '#93c5fd', name: 'P20–P40'},
+                            {from: p40, to: p60, color: '#60a5fa', name: 'P40–P60'},
+                            {from: p60, to: p80, color: '#3b82f6', name: 'P60–P80'},
+                            {from: p80, to: p95, color: '#1d4ed8', name: 'P80–P95'},
+                            {from: p95, to: maxPos, color: '#0b1f6a', name: 'Top 5%'}
+                        ]
+                    }
+                }
+            },
+            tooltip: {
+                y: {
+                    formatter: function (v, {seriesIndex, dataPointIndex, w}) {
+                        const item = w.config.series[seriesIndex].data[dataPointIndex]
+                        const raw = item?._raw ?? 0
+                        return `$${Math.round(raw).toLocaleString()}`
+                    }
+                }
+            }
         }
     }
 })
 
-/* Radar: top equipment types by units */
+
 const cTopTypesRadar = computed(() => {
     const map = new Map()
     for (const o of orders.value) {
@@ -590,15 +674,10 @@ onMounted(refresh)
 <style scoped>
 /* layout & buttons */
 .page {
-    padding: 16px;
+    padding: 0;
 }
 
-.card {
-    background: #fff;
-    border: 1px solid #eee;
-    border-radius: 12px;
-}
-
+/* ❗与 Vendors 保持一致：不在此处覆盖 .card 的背景/边框/圆角，使用全局 .card 样式 */
 .p16 {
     padding: 16px;
 }
@@ -609,16 +688,6 @@ onMounted(refresh)
     justify-content: space-between;
     gap: 12px;
     margin-bottom: 12px;
-}
-
-.title .h1 {
-    font-size: 18px;
-    font-weight: 700;
-}
-
-.title .sub {
-    color: #6B7280;
-    font-size: 13px;
 }
 
 .actions {
@@ -655,14 +724,15 @@ onMounted(refresh)
 .stats-grid {
     margin-top: 16px;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 16px;
 }
 
+/* stat-card 仅作标识，不再设定 padding，避免与 Vendors 差异 */
 .stat-card {
-    padding: 8px;
 }
 
+/* 图表标题 */
 .chart-title {
     font-weight: 700;
     margin: 12px 12px 0;
