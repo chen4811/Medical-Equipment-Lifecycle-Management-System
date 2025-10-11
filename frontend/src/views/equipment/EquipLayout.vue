@@ -23,11 +23,11 @@ import {useRoute} from 'vue-router'
 import {computed} from 'vue'
 
 const menuItems = [
-    {label: 'Dashboard', to: '/equipment/dashboard'},
-    {label: 'Equipment Ledger', to: '/equipment/ledger'},
-    {label: 'Onboarding & Profiling', to: '/equipment/onboarding'},
-    {label: 'Repairs', to: '/equipment/repairs'},
-    {label: 'Scrap Management', to: '/equipment/scrap'},
+    {label: 'Dashboard', to: '/equipment/dashboard', icon: '🏠'},
+    {label: 'Equipment Ledger', to: '/equipment/ledger', icon: '📒'},
+    {label: 'Onboarding & Profiling', to: '/equipment/onboarding', icon: '🧪'},
+    {label: 'Repairs', to: '/equipment/repairs', icon: '🛠️'},
+    {label: 'Scrap Management', to: '/equipment/scrap', icon: '🗑️'},
 ]
 
 const route = useRoute()
@@ -50,7 +50,7 @@ const today = formatDate(new Date())
     grid-template-columns: 240px 1fr;
     height: 100vh;
     gap: 0;
-    overflow: hidden; /* ✅ 阻止外层滚动 */
+    overflow: hidden; /* 阻止外层滚动 */
 }
 
 .content {
@@ -58,8 +58,8 @@ const today = formatDate(new Date())
     flex-direction: column;
     gap: 16px;
     padding: 16px;
-    overflow: auto; /* ✅ 只让右侧内容区滚动 */
-    -webkit-overflow-scrolling: touch; /* ✅ 移动端平滑滚动 */
+    overflow: auto; /* 只让右侧内容区滚动 */
+    -webkit-overflow-scrolling: touch; /* 移动端平滑滚动 */
 }
 
 .page-header {
