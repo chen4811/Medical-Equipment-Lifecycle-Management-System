@@ -23,7 +23,7 @@
                 <div class="skeleton-card" v-for="i in 4" :key="i"></div>
             </div>
 
-            <!-- 内容块（与采购页相同：全部置于外层卡片内） -->
+            <!-- 内容块：与其它角色 Dashboard 保持一致的结构与间距 -->
             <template v-else>
                 <!-- KPI -->
                 <div class="grid">
@@ -33,8 +33,8 @@
                     <StatCard label="Unfinished Repairments" :value="todosRepair"/>
                 </div>
 
-                <!-- 二列区块，每个再是内层卡片（与采购页统一宽度） -->
-                <div class="grid two wide" style="margin-top:16px;">
+                <!-- 二列区块：与采购/设备页相同的自适应宽度 -->
+                <div class="stats-grid">
                     <div class="card p16">
                         <div class="subtitle">Usage & Repair Overview</div>
                         <p class="muted">Collect from in-use and under-repair data</p>
@@ -55,10 +55,9 @@
                             <div class="progress-repair" :style="{ width: underRepairBar + '%' }" :title="`Under Repair ${underRepair}`"></div>
                         </div>
 
-                        <div class="legend">
-                            <span class="badge inuse"></span> In Use {{ inUse }}
-                            <span class="spacer"></span>
-                            <span class="badge repair"></span> Under Repair {{ underRepair }}
+                        <div class="legend between">
+                            <div><span class="badge inuse"></span> In Use {{ inUse }}</div>
+                            <div><span class="badge repair"></span> Under Repair {{ underRepair }}</div>
                         </div>
                     </div>
 
@@ -86,10 +85,9 @@
                             <div class="progress-repair" :style="{ width: repairTodoBar + '%' }" :title="`Repair Todos ${todosRepair}`"></div>
                         </div>
 
-                        <div class="legend">
-                            <span class="badge usage"></span> Usage Todos {{ todosUsage }}
-                            <span class="spacer"></span>
-                            <span class="badge repair"></span> Repair Todos {{ todosRepair }}
+                        <div class="legend between">
+                            <div><span class="badge usage"></span> Usage Todos {{ todosUsage }}</div>
+                            <div><span class="badge repair"></span> Repair Todos {{ todosRepair }}</div>
                         </div>
                     </div>
                 </div>
@@ -226,7 +224,7 @@ onMounted(async () => {
 .header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
 
 /* Card 在全局 theme.css 中已统一，这里仅控制内边距 */
-.padded { padding:16px; }
+.p16 { padding:16px; }
 
 /* Grid */
 .grid {
@@ -235,21 +233,21 @@ onMounted(async () => {
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
-.grid.two {
+/* 与采购/设备页一致的二列自适应网格 */
+.stats-grid {
+    margin-top: 16px;
+    display: grid;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-}
-
-.grid.two.wide {
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 16px;
 }
 
 /* Progress Bar */
 .progress {
-    height: 12px;
+    height: 10px;
     border-radius: 999px;
     background: #f3f4f6;
     overflow: hidden;
-    margin: 20px 0 20px;
+    margin: 12px 0 10px;
     display: flex;
 }
 
@@ -278,6 +276,8 @@ onMounted(async () => {
     color: #6b7280;
 }
 
+.legend.between { justify-content: space-between; }
+
 .badge {
     width: 10px;
     height: 10px;
@@ -298,9 +298,7 @@ onMounted(async () => {
     background: #10b981;
 }
 
-.spacer {
-    flex: 1;
-}
+/* 统一移除 spacer 方案，改用 .legend.between */
 
 /* Metric Row */
 .metric-row {
