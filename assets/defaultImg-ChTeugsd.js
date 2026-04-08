@@ -1,0 +1,1 @@
+const s="/assets/xray-Kp6kQ8zi.png",a="/assets/ecg-BFhk0FD7.png",n="/assets/defibrillator-CQp-8waW.png",t="/assets/blood_analyzer-B_CFnwdo.png",e="/assets/infusion_pump-Bj4VshYY.png",o="/assets/defaultImg-B8VqDyp3.png";export{n as a,t as b,o as d,a as e,e as i,s as x};
