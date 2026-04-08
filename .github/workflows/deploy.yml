@@ -1,37 +1,58 @@
-name: Deploy Frontend to GitHub Pages
+name: Deploy Vue Frontend to GitHub Pages
 
+# 触发条件：main分支推送/手动触发
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   workflow_dispatch:
 
+# 给Actions分配Pages部署所需的权限（官方要求）
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 避免并发部署冲突
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pages: write
-      id-token: write
+    # 绑定GitHub Pages环境，自动生成部署URL
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - name: Checkout
+      # 1. 拉取代码
+      - name: Checkout code
         uses: actions/checkout@v4
 
+      # 2. 配置Node.js环境
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18.x
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
 
+      # 3. 进入frontend目录安装依赖（核心修复：解决package.json找不到的问题）
       - name: Install dependencies
         run: cd frontend && npm ci
 
-      - name: Build
+      # 4. 构建Vue项目，生成dist目录
+      - name: Build Vue project
         run: cd frontend && npm run build
 
-      # 强制把 dist 发布到 GitHub Pages
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v4
+      # 5. 上传构建产物（frontend/dist）到Pages
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: frontend/dist
-          force_orphan: true
+          path: frontend/dist
+
+      # 6. 官方部署动作，自动发布到GitHub Pages
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
