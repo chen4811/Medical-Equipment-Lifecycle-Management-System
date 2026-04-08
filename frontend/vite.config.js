@@ -1,28 +1,12 @@
-import { fileURLToPath, URL } from 'node:url'
-
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import vueDevTools from 'vite-plugin-vue-devtools'
 
-// https://vite.dev/config/
+// https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [
-    vue(),
-    vueDevTools(),
-  ],
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
-    },
-  },
-  server: {
-    proxy: {
-      '/req': {
-        target: 'http://localhost:8080',
-        changeOrigin: true
-      }
-    }
-  }
-  base: "/Medical-Equipment-Lifecycle-Management-System/"， 
+  // 核心：GitHub Pages子路径，必须和仓库名完全一致！
+  base: '/Medical-Equipment-Lifecycle-Management-System/',
   plugins: [vue()],
+  server: {
+    port: 3000
+  }
 })
