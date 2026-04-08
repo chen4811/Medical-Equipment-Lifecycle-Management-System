@@ -1,0 +1,78 @@
+# .github/workflows/deploy.yml
+name: Node.js Deploy (Medical Equipment System)
+
+# 触发条件：main分支代码推送且CI通过后触发部署
+on:
+  push:
+    branches: [ "main" ]
+  # 也可手动触发部署（推荐，医疗系统部署需谨慎）
+  workflow_dispatch:
+
+jobs:
+  # 第一步：先执行构建&测试（复用原有CI逻辑，确保代码无问题）
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x] # 部署固定使用一个稳定版本（医疗系统避免多版本兼容问题）
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build --if-present
+      - run: npm test
+      # 上传构建产物，供部署阶段使用
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-dist
+          path: |
+            ./dist # 前端/后端构建产物目录（根据你的项目调整）
+            ./package.json
+            ./package-lock.json
+            ./node_modules # 可选，避免服务器重复安装（如需服务器编译则删除）
+
+  # 第二步：构建通过后执行部署
+  deploy:
+    needs: build-and-test # 依赖build-and-test任务成功
+    runs-on: ubuntu-latest
+    steps:
+      # 下载构建产物
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-dist
+          path: ./deploy-temp # 临时目录存放构建产物
+
+      # 配置SSH，连接服务器（核心部署步骤）
+      - name: Deploy to Server via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          # 以下信息通过GitHub Secrets配置，避免硬编码（医疗系统敏感信息保护）
+          host: ${{ secrets.DEPLOY_HOST }} # 服务器IP/域名
+          username: ${{ secrets.DEPLOY_USERNAME }} # 服务器登录用户名（如root）
+          password: ${{ secrets.DEPLOY_PASSWORD }} # 服务器密码（或用SSH密钥更安全）
+          # 若用SSH密钥：key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT }} # 服务器端口（默认22）
+          # 服务器上执行的部署命令（根据你的项目调整）
+          script: |
+            # 进入项目部署目录
+            cd /usr/local/medical-equipment-system
+            # 停止当前运行的服务（PM2管理Node.js进程，医疗系统需平滑启停）
+            pm2 stop medical-system || true
+            # 清空旧文件（保留配置文件，避免医疗设备数据配置丢失）
+            rm -rf ./dist ./node_modules ./package.json ./package-lock.json
+            # 复制新构建产物到部署目录
+            cp -r /tmp/deploy-temp/* ./
+            # 安装依赖（若未上传node_modules则执行）
+            npm ci --production # 只安装生产依赖，加快部署
+            # 重启服务
+            pm2 start medical-system || pm2 start app.js --name medical-system
+            # 可选：重启Nginx（若前端静态文件更新）
+            systemctl restart nginx || true
+            # 可选：记录部署日志（医疗系统需审计部署记录）
+            echo "Deploy success at $(date)" >> /var/log/medical-system-deploy.log
