@@ -1,58 +1,55 @@
-name: Deploy Vue Frontend to GitHub Pages
+# This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs
 
-# 触发条件：main分支推送/手动触发
+name: Node.js CI
+
+# 修正：中文关键词替换为英文，分支语法标准化
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch:
-
-# 给Actions分配Pages部署所需的权限（官方要求）
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-# 避免并发部署冲突
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
-    # 绑定GitHub Pages环境，自动生成部署URL
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x] # 匹配README要求的Node.js 18+
 
     steps:
-      # 1. 拉取代码
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - uses: actions/checkout@v4
+    
+    # 修正1：进入frontend目录（项目前端代码根目录）
+    - name: Navigate to frontend directory
+      working-directory: ./frontend
+      
+    # 修正2：使用指定Node版本，缓存npm依赖（限定frontend目录）
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: ./frontend/package-lock.json # 精准缓存前端依赖
+    
+    # 修正3：安装前端依赖（限定frontend目录）
+    - name: Install frontend dependencies
+      working-directory: ./frontend
+      run: npm ci
+    
+    # 修正4：构建前端项目（匹配README的npm run build）
+    - name: Build frontend project (Vue 3 + Vite)
+      working-directory: ./frontend
+      run: npm run build --if-present
+    
+    # 修正5：运行前端测试（若package.json有test脚本）
+    - name: Run frontend tests
+      working-directory: ./frontend
+      run: npm test --if-present # 加--if-present避免无test脚本时报错
 
-      # 2. 配置Node.js环境
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18.x
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-
-      # 3. 进入frontend目录安装依赖（核心修复：解决package.json找不到的问题）
-      - name: Install dependencies
-        run: cd frontend && npm ci
-
-      # 4. 构建Vue项目，生成dist目录
-      - name: Build Vue project
-        run: cd frontend && npm run build
-
-      # 5. 上传构建产物（frontend/dist）到Pages
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: frontend/dist
-
-      # 6. 官方部署动作，自动发布到GitHub Pages
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+    # 可选：上传构建产物（便于部署复用）
+    - name: Upload frontend build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-dist-${{ matrix.node-version }}
+        path: ./frontend/dist/ # 匹配README中build输出的dist目录
