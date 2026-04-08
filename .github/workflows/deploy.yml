@@ -1,57 +1,37 @@
-name: Node.js Deploy (医疗设备管理系统)
+name: Build and Deploy Frontend
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
-  build-and-test:
+  build:
     runs-on: ubuntu-latest
-    
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
+      - uses: actions/checkout@v4
+
       - name: Use Node.js 18.x
         uses: actions/setup-node@v4
         with:
           node-version: 18.x
           cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json  # 缓存依赖
 
-      # 关键修复：先列出目录，确认文件位置
-      - name: List files
-        run: ls -la
-        
-      # 安装依赖
+      # 进入 frontend 目录执行命令 ✅ 关键修复
       - name: Install dependencies
-        run: npm ci
+        run: cd frontend && npm ci
 
-      # 构建（如果有build命令）
-      - name: Build
-        run: npm run build --if-present
+      - name: Build project
+        run: cd frontend && npm run build --if-present
 
-      # 测试
-      - name: Test
-        run: npm test --if-present
+      - name: Run tests
+        run: cd frontend && npm test --if-present
 
-      # 上传产物
-      - name: Upload build files
+      # 上传构建好的 dist 产物
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: build-dist
-          path: |
-            ./*
-            !node_modules
-
-  deploy:
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: build-dist
-          
-      - name: List downloaded files
-        run: ls -la
+          name: frontend-build
+          path: frontend/dist
