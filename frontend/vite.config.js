@@ -23,6 +23,6 @@ export default defineConfig({
       }
     }
   }
-  base: "/Medical-Equipment-Lifecycle-Management-System/",  // 👈 必须加
+  base: "/Medical-Equipment-Lifecycle-Management-System/"， 
   plugins: [vue()],
 })
